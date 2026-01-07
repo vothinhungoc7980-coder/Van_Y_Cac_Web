@@ -1,0 +1,104 @@
+/* Reset mặc định của trình duyệt */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif; /* Font chữ hiện đại */
+}
+
+body {
+    background-color: #f4f4f4;
+    height: 200vh; /* Chiều cao giả để test cuộn trang */
+}
+
+/* --- STYLE CHO THANH MENU --- */
+.main-header {
+    background-color: #ffffff;
+    height: 80px; /* Chiều cao cố định của menu */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); /* Đổ bóng nhẹ sang trọng */
+    position: sticky; /* Giúp menu dính chặt khi cuộn */
+    top: 0;
+    z-index: 1000; /* Luôn nằm trên các phần tử khác */
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+}
+
+.navbar {
+    width: 100%;
+    max-width: 1200px; /* Giới hạn chiều rộng nội dung cho đẹp mắt */
+    margin: 0 auto; /* Căn giữa khung menu */
+    padding: 0 20px;
+    display: flex; /* Dàn ngang các thành phần con */
+    justify-content: space-between; /* Đẩy Logo sang trái, Menu sang phải */
+    align-items: center;
+}
+
+/* 1. Logo */
+.logo a {
+    text-decoration: none;
+    font-size: 24px;
+    font-weight: 700;
+    color: #333;
+    letter-spacing: 1px;
+}
+
+/* 2. Danh sách Menu (Dàn ngang) */
+.nav-links {
+    list-style: none; /* Bỏ dấu chấm đầu dòng */
+    display: flex; /* Dàn ngang các thẻ li */
+    gap: 40px; /* Khoảng cách giữa các mục menu */
+}
+
+.nav-links li a {
+    text-decoration: none;
+    color: #555;
+    font-size: 16px;
+    font-weight: 500;
+    transition: color 0.3s ease; /* Hiệu ứng chuyển màu mượt */
+    position: relative;
+}
+
+/* Hiệu ứng Hover (Di chuột vào) */
+.nav-links li a:hover {
+    color: #007bff; /* Đổi màu khi hover */
+}
+
+/* Hiệu ứng gạch chân chạy ra khi hover (Nghệ thuật) */
+.nav-links li a::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: -5px;
+    left: 0;
+    background-color: #007bff;
+    transition: width 0.3s;
+}
+
+.nav-links li a:hover::after {
+    width: 100%;
+}
+
+/* 3. Nút hành động (Đăng nhập) */
+.btn-login {
+    padding: 10px 25px;
+    background-color: #333;
+    color: #fff;
+    border: none;
+    border-radius: 25px; /* Bo tròn nút */
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-login:hover {
+    background-color: #007bff;
+    transform: translateY(-2px); /* Nhấc nút lên nhẹ khi hover */
+    box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+}
+
+/* --- Demo nội dung --- */
+.content {
+    text-align: center;
+    padding-top: 100px;
+}

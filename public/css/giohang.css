@@ -1,0 +1,21 @@
+ :root { --brand-red: #8B0000; --bg-light: #f8f9fa; }
+        body { font-family: 'Poppins', sans-serif; background-color: var(--bg-light); }
+        h1, h2, h3 { font-family: 'Merriweather', serif; }
+        
+        .cart-header { background: linear-gradient(to right, var(--brand-red), #a00000); color: white; padding: 20px 0; }
+        .custom-card { border: none; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); background: white; }
+        
+        /* Checkbox to đẹp */
+        .form-check-input { width: 1.3em; height: 1.3em; margin-top: 0.2em; border: 2px solid #aaa; cursor: pointer; }
+        .form-check-input:checked { background-color: var(--brand-red); border-color: var(--brand-red); }
+        
+        .cart-img-thumb { width: 90px; height: 90px; object-fit: cover; border-radius: 8px; }
+        .qty-container { display: inline-flex; border: 1px solid #ddd; border-radius: 4px; }
+        .btn-qty { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; text-decoration: none; color: #333; background: #fff; }
+        .btn-qty:hover { background: #eee; }
+        .qty-input { width: 35px; text-align: center; border: none; font-weight: 600; outline: none; }
+        
+        .summary-card { position: sticky; top: 20px; }
+        .btn-checkout { background-color: var(--brand-red); color: white; border-radius: 50px; padding: 12px; font-weight: bold; width: 100%; border: none; transition: 0.3s; }
+        .btn-checkout:hover { background-color: #6d0000; transform: translateY(-2px); }
+        .btn-checkout:disabled { background-color: #ccc; cursor: not-allowed; transform: none; }
