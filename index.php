@@ -1,4 +1,5 @@
 <?php
+session_start();
 include 'config/db.php';
 include 'resources/views/layouts/header.php';
 ?>

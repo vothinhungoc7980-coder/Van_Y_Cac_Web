@@ -61,7 +61,7 @@ foreach ($_SESSION['cart'] as $item) {
     <div class="cart-header mb-4">
         <div class="container d-flex justify-content-between align-items-center">
             <h3 class="mb-0 fw-bold"><i class="fas fa-shopping-cart me-2"></i>Giỏ Hàng</h3>
-            <a href="chitiet_sanpham.php" class="btn btn-outline-light rounded-pill btn-sm">Tiếp tục mua</a>
+            <a href="index.php" class="btn btn-outline-light rounded-pill btn-sm">Tiếp tục mua</a>
         </div>
     </div>
 

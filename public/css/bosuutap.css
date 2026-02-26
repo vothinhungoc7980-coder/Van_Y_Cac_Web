@@ -1,0 +1,214 @@
+/* Animation xuất hiện từ dưới lên */
+.product-card {
+    opacity: 0;
+    animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Khai báo biến màu sắc để dễ quản lý */
+:root {
+    --red-deep: #8B0000;
+    --gold: #C9A84C;
+    --gold-light: #E5C76B;
+    --cream: #FAF6EF;
+    --text-dark: #2C1810;
+    --border-color: rgba(201, 168, 76, 0.3);
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* Toàn bộ Section */
+.collection {
+    padding: 100px 0;
+    background-color: var(--cream);
+    font-family: 'Poppins', sans-serif;
+}
+
+/* Tiêu đề phần */
+.section-header {
+    text-align: center;
+    margin-bottom: 60px;
+}
+
+.sub-title {
+    font-size: 0.9rem;
+    letter-spacing: 5px;
+    color: var(--gold);
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.main-title {
+    font-family: 'Merriweather', serif;
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--red-deep);
+    margin: 0;
+}
+
+.dividing-line {
+    width: 80px;
+    height: 3px;
+    background: var(--gold);
+    margin: 20px auto;
+}
+
+/* Hệ thống Grid */
+.collection-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 40px;
+}
+
+/* Hiệu ứng Animation xuất hiện lần lượt */
+.product-card {
+    opacity: 0;
+    animation: fadeInUp 0.8s ease forwards;
+    background: white;
+    transition: all 0.4s ease;
+    border: 1px solid transparent;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Khung chứa ảnh */
+.product-image-wrapper {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 3/4; /* Giữ ảnh luôn chuẩn khung dọc */
+    background: #f9f9f9;
+}
+
+.product-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.8s cubic-bezier(0.2, 1, 0.3, 1);
+}
+
+/* Badge Tuyệt tác */
+.product-badge {
+    position: absolute;
+    top: 0;           /* Sát mép trên */
+    right: 0;         /* Chuyển từ left sang right */
+    background: var(--red-deep);
+    color: var(--gold-light);
+    padding: 8px 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    z-index: 10;
+    
+    /* Hiệu ứng đổ bóng và bo góc nhẹ phía dưới bên trái để tạo điểm nhấn */
+    box-shadow: -2px 2px 10px rgba(0,0,0,0.2);
+    border-bottom-left-radius: 0px; 
+    
+    /* Hiệu ứng chữ viết hoa */
+    text-transform: uppercase;
+}
+
+/* Hiệu ứng phụ: Khi di chuột vào card, Badge sẽ hơi sáng lên */
+.product-card:hover .product-badge {
+    background: #a00000; /* Đỏ tươi hơn một chút */
+    transition: 0.3s;
+}
+
+/* Lớp phủ khi di chuột (Overlay) */
+.product-actions {
+    position: absolute;
+    bottom: -60px; /* Giấu nút bên dưới */
+    left: 0;
+    width: 100%;
+    padding: 20px;
+    background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+    transition: all 0.4s ease;
+    display: flex;
+    justify-content: center;
+    z-index: 5;
+}
+
+.product-card:hover .product-actions {
+    bottom: 0;
+}
+
+.product-card:hover .product-img {
+    transform: scale(1.1);
+}
+
+/* Nút Mua Ngay */
+.action-btn {
+    background: var(--gold);
+    color: white;
+    padding: 10px 25px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    border: none;
+    transition: 0.3s;
+}
+
+.action-btn:hover {
+    background: white;
+    color: var(--red-deep);
+}
+
+/* Nội dung thông tin sản phẩm */
+.product-content {
+    padding: 20px;
+    text-align: center;
+}
+
+.category-tag {
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+}
+
+.product-name {
+    font-family: 'Merriweather', serif;
+    font-size: 1.25rem;
+    color: var(--text-dark);
+    margin-bottom: 10px;
+    transition: 0.3s;
+}
+
+.product-card:hover .product-name {
+    color: var(--red-deep);
+}
+
+.price-box {
+    margin-top: 5px;
+}
+
+.price-val {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--gold);
+}
+
+/* Responsive cho điện thoại */
+@media (max-width: 768px) {
+    .main-title { font-size: 2rem; }
+    .collection-grid { gap: 20px; }
+}
