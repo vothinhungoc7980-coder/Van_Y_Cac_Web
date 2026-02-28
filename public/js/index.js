@@ -141,3 +141,48 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 });
+document.addEventListener("DOMContentLoaded", function () {
+    
+    // 1. Khởi tạo hiệu ứng cuộn trang AOS
+    AOS.init({
+        duration: 800, 
+        easing: 'ease-out-cubic',
+        once: true, 
+        offset: 50 
+    });
+
+    // 2. Khởi tạo Swiper (Hiển thị 4 sản phẩm / hàng)
+    var swiper = new Swiper(".productSwiper", {
+        slidesPerView: 1, // Trên điện thoại hiện 1 hình
+        spaceBetween: 20, // Khoảng cách giữa các khung
+        loop: true, // Vuốt tròn vòng
+        autoplay: {
+            delay: 3000, 
+            disableOnInteraction: false,
+        },
+        pagination: {
+            el: ".swiper-pagination",
+            clickable: true,
+        },
+        navigation: {
+            nextEl: ".swiper-button-next",
+            prevEl: ".swiper-button-prev",
+        },
+        // Chỉnh sửa theo kích thước màn hình
+        breakpoints: {
+            576: {
+                slidesPerView: 2, // Màn hình nhỏ hiện 2
+                spaceBetween: 20,
+            },
+            768: {
+                slidesPerView: 3, // Tablet hiện 3
+                spaceBetween: 25,
+            },
+            1024: {
+                slidesPerView: 4, // Máy tính hiện 4 sản phẩm
+                spaceBetween: 30,
+            },
+        },
+    });
+});
+

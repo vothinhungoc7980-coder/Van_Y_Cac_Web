@@ -151,15 +151,6 @@
     </div>
 </nav>
 
-<header class="hero-banner">
-    <div class="overlay"></div>
-    <div class="hero-content">
-        <h1 class="hero-title">Tinh Hoa Cổ Phục Việt</h1>
-        <p class="hero-subtitle">Khôi phục vẻ đẹp truyền thống - Kết nối giá trị hiện đại</p>
-        <a href="#shop" class="btn btn-warning btn-hero text-dark">Khám Phá Ngay</a>
-    </div>
-</header>
-
 <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content p-3">
