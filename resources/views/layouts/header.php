@@ -90,7 +90,6 @@
           <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
             <li class="nav-item"><a class="nav-link active text-warning" href="index.php">Trang chủ</a></li>
             <li class="nav-item"><a class="nav-link text-white" href="bosuutap.php">Bộ Sưu Tập</a></li>
-            
             <li class="nav-item dropdown parent-hover">
                 <a class="nav-link dropdown-toggle text-white" href="cophuc.php" id="navbarDropdown" role="button" aria-expanded="false">
                     Việt Cổ Phục
@@ -121,61 +120,77 @@
                 <a href="giohang.php" class="btn btn-outline-warning position-relative me-3 rounded-circle" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
                     <i class="fas fa-shopping-cart"></i>
                     <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light">0</span>
-                </a>
-                
-                <?php if (isset($_SESSION['user'])): ?>
-                    <div class="dropdown">
-                        <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                            <img src="https://ui-avatars.com/api/?name=<?php echo urlencode($_SESSION['user']['fullname']); ?>&background=ffc107&color=8B0000" alt="Avatar" width="40" height="40" class="rounded-circle me-2 border border-warning">
-                            <span class="fw-bold text-warning"><?php echo htmlspecialchars($_SESSION['user']['fullname']); ?></span>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow custom-dropdown" aria-labelledby="userDropdown">
-                            <li><a class="dropdown-item" href="trangcanhan.php"><i class="fas fa-user me-2"></i>Trang cá nhân</a></li>
-                            
-                            <?php if(isset($_SESSION['user']['role']) && $_SESSION['user']['role'] === 'Quản trị viên'): ?>
-                                <li><a class="dropdown-item text-primary" href="admin/index.php"><i class="fas fa-cog me-2"></i>Trang quản trị</a></li>
-                            <?php endif; ?>
-                            
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="logout.php"><i class="fas fa-sign-out-alt me-2"></i>Đăng xuất</a></li>
-                        </ul>
-                    </div>
+                </a>        
+  <?php if (isset($_SESSION['user'])): ?>
+
+                <!-- USER DROPDOWN -->
+                <div class="dropdown">
+                    <a href="#" 
+                       class="d-flex align-items-center text-white text-decoration-none dropdown-toggle"
+                       data-bs-toggle="dropdown"
+                       aria-expanded="false">
+
+                        <img src="https://ui-avatars.com/api/?name=<?php echo urlencode($_SESSION['user']['fullname']); ?>&background=ffc107&color=8B0000"
+                             width="40"
+                             height="40"
+                             class="rounded-circle me-2 border border-warning">
+
+                        <span class="fw-bold text-warning">
+                            <?php echo htmlspecialchars($_SESSION['user']['fullname']); ?>
+                        </span>
+                    </a>
+
+                    <ul class="dropdown-menu dropdown-menu-end shadow custom-dropdown">
+                        <li>
+                            <a class="dropdown-item" href="trangcanhan.php">
+                                <i class="fas fa-user me-2"></i>Trang cá nhân
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="logout.php" onclick="return confirm('Bạn có chắc muốn đăng xuất không?');">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Đăng xuất
+                                </a>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
                 <?php else: ?>
-                    <button type="button" class="btn btn-warning text-dark fw-bold px-4 rounded-pill" data-bs-toggle="modal" data-bs-target="#loginModal">
-                        Đăng nhập
-                    </button>
+
+                <!-- NÚT ĐĂNG NHẬP -->
+                <button class="btn btn-warning fw-bold" data-bs-toggle="modal" data-bs-target="#loginModal">
+                    Đăng nhập
+                </button>
+
                 <?php endif; ?>
 
             </div>
         </div>
     </div>
 </nav>
-
-<div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
+<!-- ================= MODAL LOGIN ================= -->
+<div class="modal fade" id="loginModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content p-3">
             <div class="modal-header">
                 <h5 class="modal-title">Đăng Nhập</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form id="loginForm">
-                    <div id="loginMessage" class="alert d-none text-center" style="font-size: 0.9rem;"></div>
+                    <div id="loginMessage" class="alert d-none text-center"></div>
+
                     <div class="mb-3">
-                        <input type="text" name="username" class="form-control" placeholder="Tên đăng nhập hoặc Email" required>
+                        <input type="text" name="username" class="form-control" placeholder="Tên đăng nhập" required>
                     </div>
                     <div class="mb-3">
                         <input type="password" name="password" class="form-control" placeholder="Mật khẩu" required>
                     </div>
-                    
-                    <div class="d-flex justify-content-end mb-3">
-                        <a href="#" class="text-decoration-none small" style="color: #8B0000;">Quên mật khẩu?</a>
-                    </div>
 
                     <button type="submit" class="btn btn-primary-custom">Đăng Nhập</button>
                 </form>
-
-                <div class="divider-text">
+                 <div class="divider-text">
                     <span>Hoặc tiếp tục với</span>
                 </div>
 
@@ -185,7 +200,7 @@
 
                 <div class="text-center mt-3">
                     <span class="text-muted small">Chưa có tài khoản? </span>
-                    <a href="#" id="btnSwitchToRegister" class="fw-bold text-decoration-none" style="color: #8B0000;">
+                    <a href="#" id="btnSwitchToRegister" class="fw-bold text-decoration-none" style="color:#8B0000;">
                         Đăng ký ngay
                     </a>
                 </div>
@@ -194,16 +209,17 @@
     </div>
 </div>
 
-<div class="modal fade" id="registerModal" tabindex="-1" aria-hidden="true">
+<!-- ================= MODAL REGISTER ================= -->
+<div class="modal fade" id="registerModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content p-3">
             <div class="modal-header">
                 <h5 class="modal-title">Đăng Ký Tài Khoản</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form id="registerForm">
-                    <div id="registerMessage" class="alert d-none text-center" style="font-size: 0.9rem;"></div>
+                         <div id="registerMessage" class="alert d-none text-center" style="font-size: 0.9rem;"></div>
                     <div class="mb-3">
                         <input type="text" name="fullname" class="form-control" placeholder="Họ và tên" required>
                     </div>
@@ -229,10 +245,9 @@
 
                     <button type="submit" class="btn btn-primary-custom">Đăng Ký</button>
                 </form>
-
-                <div class="text-center mt-4">
+                <div class="text-center mt-3">
                     <span class="text-muted small">Đã có tài khoản? </span>
-                    <a href="#" id="btnSwitchToLogin" class="fw-bold text-decoration-none" style="color: #8B0000;">
+                    <a href="#" id="btnSwitchToLogin" class="fw-bold text-decoration-none" style="color:#8B0000;">
                         Đăng nhập
                     </a>
                 </div>
@@ -241,6 +256,4 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="public/js/api.js"></script> 
-<script src="public/js/index.js"></script>
+

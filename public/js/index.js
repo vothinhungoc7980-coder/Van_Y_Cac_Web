@@ -1,47 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
 
-    // ==========================================
-    // 0. KIỂM TRA LOGIN ĐỂ HIỆN AVATAR
-    // ==========================================
-    async function checkLogin() {
-        const authArea = document.getElementById("authArea");
-        if (!authArea) return;
-
-        const res = await fetch("public/api.php?action=getUser");
-        const data = await res.json();
-
-        if (data.loggedIn) {
-            authArea.innerHTML = `
-                <div class="dropdown">
-                    <img src="public/images/avatar.png"
-                         width="40"
-                         height="40"
-                         class="rounded-circle"
-                         style="cursor:pointer"
-                         data-bs-toggle="dropdown">
-
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li>
-                            <a class="dropdown-item" href="trangcanhan.php">
-                                Trang cá nhân
-                            </a>
-                        </li>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                        <li>
-                            <a class="dropdown-item text-danger" href="#" id="btnLogout">
-                                Đăng xuất
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            `;
-        }
-    }
-
-    checkLogin();
-
+    
     // ==========================================
     // 1. MODAL LOGIN / REGISTER
     // ==========================================
@@ -185,4 +144,3 @@ document.addEventListener("DOMContentLoaded", function () {
         },
     });
 });
-
