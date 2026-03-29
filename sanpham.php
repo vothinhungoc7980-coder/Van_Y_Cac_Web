@@ -43,6 +43,15 @@ $tong_dg  = (int)($dg_tq['tong'] ?? 0);
 $pct_giam = ($sp['gia_goc'] && $sp['gia_goc'] > $sp['gia_ban']) ? round(($sp['gia_goc'] - $sp['gia_ban']) / $sp['gia_goc'] * 100) : 0;
 $da_dang_nhap = isset($_SESSION['user_id']) || isset($_SESSION['user']);
 $is_admin     = ($_SESSION['vai_tro'] ?? $_SESSION['user']['vai_tro'] ?? '') === 'Quản trị viên';
+// KIỂM TRA XEM KHÁCH ĐÃ MUA VÀ HOÀN THÀNH ĐƠN CHƯA MỚI CHO ĐÁNH GIÁ
+$da_mua_hang = false;
+if ($da_dang_nhap) {
+    $uid_check = (int)($_SESSION['user_id'] ?? $_SESSION['user']['id']);
+    $check_mua = $conn->query("SELECT 1 FROM don_hang dh JOIN chi_tiet_don_hang ct ON dh.id = ct.id_don_hang WHERE dh.id_khach_hang = $uid_check AND dh.trang_thai_dh = 'Hoàn thành' AND ct.id_san_pham = $id LIMIT 1");
+    if ($check_mua && $check_mua->num_rows > 0) {
+        $da_mua_hang = true;
+    }
+}
 
 $size_nu  = [['S','80–84','62–66','86–90','152–158','45–52'],['M','85–89','67–71','91–95','158–163','52–58'],['L','90–94','72–76','96–100','163–168','58–65'],['XL','95–99','77–81','101–105','168–173','65–72'],['2XL','100–104','82–86','106–110','173–178','72–80']];
 $size_nam = [['S','88–92','74–78','88–92','160–165','55–62'],['M','92–96','78–82','92–96','165–170','62–68'],['L','96–100','82–86','96–100','170–175','68–75'],['XL','100–104','86–90','100–104','175–180','75–82'],['2XL','104–108','90–94','104–108','180–185','82–90']];
@@ -536,7 +545,6 @@ function quickUpdateStock(spId) {
 </script>
 <?php endif; ?>
 <div class="toast-wrap" id="toastWrap"></div>
-
 <script>
 function changeImage(img) {
     document.getElementById('mainImage').src = img.src;
@@ -655,7 +663,7 @@ if (reviewForm) {
         e.preventDefault();
         const data = Object.fromEntries(new FormData(this));
         try {
-            const res = await fetch('api/review.php', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+            const res = await fetch('review.php', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
             const result = await res.json();
             if (result.success) { showToast('Đánh giá đã gửi, chờ duyệt!', 'ok'); this.reset(); rateStar(5); }
             else showToast(result.message||'Gửi thất bại','err');

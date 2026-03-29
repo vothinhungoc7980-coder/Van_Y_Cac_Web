@@ -159,7 +159,6 @@ include 'resources/views/layouts/header.php';
 <head>
     <meta charset="UTF-8">
     <title>AI Tư Vấn Trang Phục Truyền Thống</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Be+Vietnam+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; }
@@ -612,7 +611,6 @@ include 'resources/views/layouts/header.php';
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 // ─── TABS SMOOTH SCROLL ───
 document.querySelectorAll('.tab-btn').forEach(btn => {

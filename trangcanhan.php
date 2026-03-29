@@ -73,7 +73,6 @@ include 'resources/views/layouts/header.php';
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Trang Cá Nhân — Vân Y Các</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=EB+Garamond:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -322,7 +321,12 @@ body{font-family:var(--fb);background:var(--pa);color:var(--ink);font-size:15px}
                  onerror="this.src='https://placehold.co/60x75/FAF6EE/8B0000?text=SP'"
                  class="item-img" alt="<?= htmlspecialchars($oi['ten_san_pham']) ?>">
             <div class="item-info">
-              <div class="item-name"><?= htmlspecialchars($oi['ten_san_pham']) ?></div>
+              <div class="item-name">
+    <?= htmlspecialchars($oi['ten_san_pham']) ?>
+    <?php if ($order_detail['trang_thai_dh'] === 'Hoàn thành'): ?>
+        <a href="sanpham.php?id=<?= $oi['id_san_pham'] ?>&review=1" class="badge badge-success ms-2 text-decoration-none"><i class="fas fa-pen"></i> Viết đánh giá</a>
+    <?php endif; ?>
+</div>
               <div class="item-meta">Số lượng: <?= $oi['so_luong'] ?> &middot; <?= number_format($oi['gia_ban'],0,',','.')?>₫/cái</div>
             </div>
             <div class="item-price"><?= number_format($oi['thanh_tien'],0,',','.')?>₫</div>
@@ -377,7 +381,7 @@ body{font-family:var(--fb);background:var(--pa);color:var(--ink);font-size:15px}
             <tbody>
             <?php $don_hang->data_seek(0); while ($dh=$don_hang->fetch_assoc()):
               $cls2=$bdg_map[$dh['trang_thai_dh']]??'badge-secondary';
-              $sp_first=$conn->query("SELECT ten_san_pham, hinh_anh FROM chi_tiet_don_hang WHERE id_don_hang={$dh['id']} LIMIT 1")->fetch_assoc();
+             $sp_first=$conn->query("SELECT id_san_pham, ten_san_pham, hinh_anh FROM chi_tiet_don_hang WHERE id_don_hang={$dh['id']} LIMIT 1")->fetch_assoc();
               $sp_count=(int)$conn->query("SELECT COUNT(*) c FROM chi_tiet_don_hang WHERE id_don_hang={$dh['id']}")->fetch_assoc()['c'];
               $is_new = ($new_order && $dh['id']==$new_order);
             ?>
@@ -401,11 +405,11 @@ body{font-family:var(--fb);background:var(--pa);color:var(--ink);font-size:15px}
               <td><span class="badge <?= $cls2 ?>"><?= htmlspecialchars($dh['trang_thai_dh']) ?></span></td>
               <td style="white-space:nowrap">
                 <a href="?tab=orders&don=<?= $dh['id'] ?>" style="font-size:.75rem;color:var(--cr);text-decoration:none;font-weight:700;padding:4px 10px;border:1px solid var(--bd);border-radius:3px;display:inline-block;font-family:var(--fb)">Chi tiết</a>
-                <?php if ($dh['trang_thai_dh']==='Hoàn thành'): ?>
-                <a href="review.php?don=<?= $dh['id'] ?>" style="font-size:.75rem;color:#059669;text-decoration:none;margin-left:5px;font-family:var(--fb);font-weight:700;padding:4px 8px;border:1px solid #A7F3D0;border-radius:3px;display:inline-block">
-                  <i class="fas fa-star"></i> Đánh giá
-                </a>
-                <?php endif; ?>
+             <?php if ($dh['trang_thai_dh']==='Hoàn thành' && $sp_first): ?>
+<a href="sanpham.php?id=<?= $sp_first['id_san_pham'] ?>&review=1" style="font-size:.75rem;color:#059669;text-decoration:none;margin-left:5px;font-family:var(--fb);font-weight:700;padding:4px 8px;border:1px solid #A7F3D0;border-radius:3px;display:inline-block">
+  <i class="fas fa-star"></i> Đánh giá
+</a>
+<?php endif; ?>
                 <?php if ($dh['trang_thai_dh']==='Chờ xác nhận'): ?>
                 <button onclick="openCancelModal(<?= $dh['id'] ?>, '<?= htmlspecialchars($dh['ma_don_hang']) ?>')" style="font-size:.75rem;color:#dc2626;background:none;border:none;cursor:pointer;margin-left:5px;font-family:var(--fb);font-weight:700;padding:4px 0">Hủy</button>
                 <?php endif; ?>

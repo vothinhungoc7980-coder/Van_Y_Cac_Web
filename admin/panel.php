@@ -191,11 +191,11 @@ if ($page === 'khach-hang') {
 
 // ======== ĐÁNH GIÁ ========
 if ($page === 'danh-gia' && $_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['update_dg'])) {
-    $dgid=(int)$_POST['dgid'];
-    $tt  =$conn->real_escape_string($_POST['trang_thai']??'');
-    $ph  =$conn->real_escape_string(trim($_POST['phan_hoi']??''));
-    $conn->query("UPDATE danh_gia SET trang_thai='$tt',phan_hoi_admin='$ph' WHERE id=$dgid");
-    $ok='Đã cập nhật đánh giá.';
+    $dgid = (int)$_POST['dgid'];
+    $ph   = $conn->real_escape_string(trim($_POST['phan_hoi']??''));
+    // Bỏ cập nhật trang_thai, chỉ lưu phan_hoi_admin
+    $conn->query("UPDATE danh_gia SET phan_hoi_admin='$ph' WHERE id=$dgid");
+    $ok = 'Đã gửi phản hồi thành công.';
 }
 
 // ── INCLUDE HEADER
@@ -775,48 +775,101 @@ if($warn&&$warn->num_rows>0):?>
 <?php
 // ────────────────── ĐÁNH GIÁ ──────────────────
 elseif ($page === 'danh-gia'):
-$tab=$_GET['tab']??'all'; $pg=max(1,(int)($_GET['pg']??1)); $lim=15; $off=($pg-1)*$lim;
-$w="WHERE 1"; if($tab==='cho') $w.=" AND trang_thai='Chờ duyệt'"; elseif($tab==='ok') $w.=" AND trang_thai='Đã duyệt'"; elseif($tab==='no') $w.=" AND trang_thai='Từ chối'";
-$cnt_cho=(int)$conn->query("SELECT COUNT(*) v FROM danh_gia WHERE trang_thai='Chờ duyệt'")->fetch_assoc()['v'];
-$total=(int)$conn->query("SELECT COUNT(*) v FROM danh_gia $w")->fetch_assoc()['v'];
-$pages=max(1,(int)ceil($total/$lim));
-$rows=$conn->query("SELECT dg.*,sp.ten_vi FROM danh_gia dg LEFT JOIN san_pham sp ON dg.id_san_pham=sp.id $w ORDER BY dg.ngay_tao DESC LIMIT $lim OFFSET $off");
-$bdg_dg=['Chờ duyệt'=>'b-warning','Đã duyệt'=>'b-success','Từ chối'=>'b-danger'];
+$tab = $_GET['tab'] ?? 'all'; 
+$pg = max(1, (int)($_GET['pg'] ?? 1)); 
+$lim = 15; 
+$off = ($pg - 1) * $lim;
+
+// Bộ lọc: Tìm các đánh giá chưa trả lời hoặc đã trả lời
+$w = "WHERE 1"; 
+if ($tab === 'chuatl') $w .= " AND (phan_hoi_admin IS NULL OR phan_hoi_admin = '')"; 
+elseif ($tab === 'datl') $w .= " AND phan_hoi_admin != ''";
+
+$cnt_chuatl = (int)$conn->query("SELECT COUNT(*) v FROM danh_gia WHERE (phan_hoi_admin IS NULL OR phan_hoi_admin = '')")->fetch_assoc()['v'];
+$total = (int)$conn->query("SELECT COUNT(*) v FROM danh_gia $w")->fetch_assoc()['v'];
+$pages = max(1, (int)ceil($total / $lim));
+$rows = $conn->query("SELECT dg.*, sp.ten_vi FROM danh_gia dg LEFT JOIN san_pham sp ON dg.id_san_pham=sp.id $w ORDER BY dg.ngay_tao DESC LIMIT $lim OFFSET $off");
 ?>
 <div class="tab-nav">
-  <?php foreach(['all'=>'Tất Cả','cho'=>'Chờ Duyệt','ok'=>'Đã Duyệt','no'=>'Từ Chối'] as $k=>$lbl):?>
-  <button class="tab-btn <?=$tab===$k?'active':''?>" onclick="location.href='panel.php?page=danh-gia&tab=<?=$k?>'">
-    <?=$lbl?><?php if($k==='cho'&&$cnt_cho>0):?> <span class="badge b-danger"><?=$cnt_cho?></span><?php endif?>
+  <button class="tab-btn <?= $tab === 'all' ? 'active' : '' ?>" onclick="location.href='panel.php?page=danh-gia&tab=all'">Tất Cả</button>
+  <button class="tab-btn <?= $tab === 'chuatl' ? 'active' : '' ?>" onclick="location.href='panel.php?page=danh-gia&tab=chuatl'">
+    Chưa Trả Lời <?php if ($cnt_chuatl > 0): ?> <span class="badge b-danger"><?= $cnt_chuatl ?></span><?php endif; ?>
   </button>
-  <?php endforeach?>
+  <button class="tab-btn <?= $tab === 'datl' ? 'active' : '' ?>" onclick="location.href='panel.php?page=danh-gia&tab=datl'">Đã Trả Lời</button>
 </div>
+
 <div class="card"><div class="card-bd-flush" style="overflow-x:auto"><table class="dtable">
-  <thead><tr><th>Người Đánh Gía</th><th>Sản Phẩm</th><th>Nội Dung</th><th>Sao</th><th>TT</th><th>Ngày</th><th></th></tr></thead>
+  <thead><tr><th>Người Đánh Giá</th><th>Sản Phẩm</th><th>Nội Dung</th><th>Sao</th><th>Phản Hồi</th><th>Ngày</th><th>Thao Tác</th></tr></thead>
   <tbody><?php while($d=$rows->fetch_assoc()):?>
   <tr>
     <td><strong style="font-size:.84rem"><?=htmlspecialchars($d['ho_ten'])?></strong></td>
     <td class="text-xs text-muted" style="max-width:130px"><?=htmlspecialchars($d['ten_vi']??'—')?></td>
     <td style="max-width:200px;font-size:.82rem"><?=htmlspecialchars(mb_substr($d['noi_dung']??'',0,70)).(mb_strlen($d['noi_dung']??'')>70?'...':'')?></td>
     <td><div style="display:flex;gap:1px"><?php for($i=1;$i<=5;$i++):?><i class="fas fa-star" style="color:<?=$i<=$d['so_sao']?'#FFD700':'#d0c4b0'?>;font-size:.72rem"></i><?php endfor?></div></td>
-    <td><span class="badge <?=$bdg_dg[$d['trang_thai']]??'b-gray'?>"><?=$d['trang_thai']?></span></td>
+    <td>
+      <?php if ($d['phan_hoi_admin']): ?>
+        <span class="badge b-success"><i class="fas fa-check"></i> Đã trả lời</span>
+      <?php else: ?>
+        <span class="badge b-warning">Chưa trả lời</span>
+      <?php endif; ?>
+    </td>
     <td class="text-xs text-muted"><?=date('d/m/Y',strtotime($d['ngay_tao']))?></td>
-    <td><button class="ibtn ib-edit" onclick="openDG(<?=htmlspecialchars(json_encode($d))?>)"><i class="fas fa-edit"></i></button></td>
+    <td><button class="ibtn ib-edit" onclick="openDG(<?=htmlspecialchars(json_encode($d))?>)" title="Trả lời"><i class="fas fa-reply"></i></button></td>
   </tr>
   <?php endwhile?></tbody>
 </table></div></div>
-<?php if($pages>1):?><div class="pagi"><?php for($i=max(1,$pg-2);$i<=min($pages,$pg+2);$i++):?><a href="panel.php?page=danh-gia&tab=<?=$tab?>&pg=<?=$i?>" class="pagi-link <?=$i==$pg?'active':''?>"><?=$i?></a><?php endfor?></div><?php endif?>
-<div class="modal-bd" id="dgModal">
-  <div class="modal-box"><div class="modal-hd"><div class="modal-title">Duyệt & Phản Hồi</div><button class="modal-close" onclick="modalClose('dgModal')"><i class="fas fa-times"></i></button></div>
-  <div class="modal-body"><div id="dgContent" style="background:#FAF6EE;border:1px solid var(--bd);border-radius:4px;padding:11px;font-size:.85rem;line-height:1.6;margin-bottom:14px;font-style:italic"></div>
-    <form method="POST" action="panel.php?page=danh-gia"><input type="hidden" name="update_dg" value="1"><input type="hidden" name="dgid" id="dgId">
-      <div class="fg"><label class="fl">Trạng Thái</label><select name="trang_thai" id="dgTT" class="fctrl"><option>Chờ duyệt</option><option>Đã duyệt</option><option>Từ chối</option></select></div>
-      <div class="fg"><label class="fl">Phản Hồi Shop</label><textarea name="phan_hoi" id="dgPH" class="fctrl" rows="3" placeholder="Phản hồi công khai..."></textarea></div>
-      <div style="display:flex;gap:8px"><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Lưu</button><button type="button" class="btn btn-secondary" onclick="modalClose('dgModal')">Đóng</button></div>
-    </form>
-  </div></div>
-</div>
-<script>function openDG(d){document.getElementById('dgId').value=d.id;document.getElementById('dgContent').textContent=d.noi_dung||'(Không có nội dung)';document.getElementById('dgTT').value=d.trang_thai;document.getElementById('dgPH').value=d.phan_hoi_admin||'';modalOpen('dgModal');}</script>
 
+<?php if($pages>1):?><div class="pagi"><?php for($i=max(1,$pg-2);$i<=min($pages,$pg+2);$i++):?><a href="panel.php?page=danh-gia&tab=<?=$tab?>&pg=<?=$i?>" class="pagi-link <?=$i==$pg?'active':''?>"><?=$i?></a><?php endfor?></div><?php endif?>
+
+<div class="modal-bd" id="dgModal">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <div class="modal-title"><i class="fas fa-reply"></i> Trả Lời Khách Hàng</div>
+      <button class="modal-close" onclick="modalClose('dgModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div id="dgContent" style="background:#FAF6EE;border:1px solid var(--bd);border-radius:4px;padding:11px;font-size:.85rem;line-height:1.6;margin-bottom:14px;font-style:italic"></div>
+      
+      <form method="POST" action="panel.php?page=danh-gia">
+        <input type="hidden" name="update_dg" value="1">
+        <input type="hidden" name="dgid" id="dgId">
+        
+        <div class="fg">
+          <label class="fl">Nội dung phản hồi từ Shop</label>
+          <textarea name="phan_hoi" id="dgPH" class="fctrl" rows="4" placeholder="Nhập phản hồi..."></textarea>
+        </div>
+        
+        <div style="display:flex;gap:8px">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Gửi Phản Hồi</button>
+          <button type="button" class="btn btn-secondary" onclick="modalClose('dgModal')">Đóng</button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+<script>
+function openDG(d) {
+    document.getElementById('dgId').value = d.id;
+    
+    // Tạo chuỗi ngôi sao
+    let stars = '';
+    for(let i=1; i<=5; i++) { 
+        stars += `<i class="fas fa-star" style="color:${i<=d.so_sao ? '#FFD700' : '#d0c4b0'}"></i>`; 
+    }
+    
+    // Đổ dữ liệu vào Modal
+    document.getElementById('dgContent').innerHTML = 
+        `<div style="margin-bottom:8px"><strong>${d.ho_ten || 'Khách hàng'}</strong> ${stars}</div>` + 
+        `<div>"${d.noi_dung || '(Khách chỉ chấm sao, không để lại bình luận)'}"</div>`;
+    
+    document.getElementById('dgPH').value = d.phan_hoi_admin || '';
+    
+    // Mở modal (Giữ nguyên hàm modalOpen của bạn)
+    modalOpen('dgModal');
+}
+</script>
 <?php
 // ────────────────── DOANH THU ──────────────────
 elseif ($page === 'doanh-thu'):
