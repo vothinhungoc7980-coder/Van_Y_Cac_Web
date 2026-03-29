@@ -1,10 +1,11 @@
 <?php
 session_start();
 include 'config/db.php';
-
-// ===== SẢN PHẨM MỚI NHẤT (8 sp) =====
-$sql_sp = "SELECT sp.id, sp.ten_vi AS name, sp.gia_ban AS price,
-                  sp.gia_goc, sp.duong_dan AS img, sp.noi_bat,
+$sql_sp = "SELECT sp.id, 
+                  sp.ten_vi AS name, 
+                  sp.gia_ban AS price, 
+                  sp.gia_goc, 
+                  sp.duong_dan AS img, 
                   dm.ten_danh_muc
            FROM san_pham sp
            LEFT JOIN danh_muc dm ON sp.id_danh_muc = dm.id
@@ -19,13 +20,11 @@ if ($result && $result->num_rows > 0) {
 }
 
 // ===== DANH MỤC CON để hiện card ảnh (lấy 6 cái) =====
-$sql_dm = "SELECT dm.id, dm.ten_danh_muc, dm.slug, dm.hinh_anh,
-                  dm_cha.ten_danh_muc AS ten_cha
+// Sửa đoạn danh mục (Dòng 26): Đảm bảo các cột id_cha, thu_tu tồn tại
+$sql_dm = "SELECT dm.id, dm.ten_danh_muc, dm.slug, dm.hinh_anh
            FROM danh_muc dm
-           LEFT JOIN danh_muc dm_cha ON dm.id_cha = dm_cha.id
-           WHERE dm.id_cha IS NOT NULL AND dm.trang_thai = 1
-           ORDER BY dm.id_cha ASC, dm.thu_tu ASC
-           LIMIT 6";
+           WHERE dm.trang_thai = 1
+           ORDER BY dm.thu_tu ASC LIMIT 6";
 $result_dm = $conn->query($sql_dm);
 $danh_muc_hien = [];
 while ($row = $result_dm->fetch_assoc()) {
@@ -39,12 +38,15 @@ include 'resources/views/layouts/header.php';
 <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 <link rel="stylesheet" href="public/css/home.css">
 
-<header class="hero-banner">
+<header class="hero-banner" py-5 my-5
+     style="background: linear-gradient(rgba(139, 0, 0, 0.65),rgba(139,0,0,0.85)),
+            url('./image/banner.jpg') fixed center center; background-size: cover;">
+    
     <div class="overlay"></div>
     <div class="hero-content" data-aos="fade-up" data-aos-duration="1500">
         <h1 class="hero-title">Tinh Hoa Cổ Phục Việt</h1>
         <p class="hero-subtitle">Khôi phục vẻ đẹp truyền thống - Kết nối giá trị hiện đại</p>
-        <a href="#shop" class="btn btn-warning btn-hero text-dark fw-bold px-5 py-3 rounded-pill shadow-lg">Khám Phá Ngay</a>
+        <a href="bosuutap.php" class="btn btn-warning btn-hero text-dark fw-bold px-5 py-3 rounded-pill shadow-lg">Khám Phá Ngay</a>
     </div>
 </header>
 
@@ -89,7 +91,7 @@ include 'resources/views/layouts/header.php';
         <div class="bg-warning mx-auto mt-2" style="width: 80px; height: 3px;"></div>
     </div>
 
-    <!-- Swiper danh mục — centeredSlides + scale effect -->
+  
     <div class="swiper dmSwiper" data-aos="fade-up" data-aos-duration="800">
         <div class="swiper-wrapper">
             <?php
@@ -263,6 +265,32 @@ include 'resources/views/layouts/header.php';
     .dm-slide-img-wrap { height: 280px; }
     .dm-slide-name { font-size: 1rem; }
 }
+
+/* lớp phủ */
+.overlay{
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+}
+
+/* nội dung */
+.hero-content{
+    position: relative;
+    color: white;
+    z-index: 2;
+    max-width: 800px;
+}
+
+.hero-title{
+    font-size: 56px;
+    font-weight: bold;
+    text-shadow: 0 4px 12px rgba(0,0,0,0.7);
+}
+
+.hero-subtitle{
+    font-size: 22px;
+    margin-bottom: 30px;
+}
 </style>
 
 <script>
@@ -361,12 +389,10 @@ document.addEventListener('DOMContentLoaded', function () {
                                        class="btn btn-outline-danger btn-sm flex-fill rounded-pill">
                                         <i class="fas fa-eye me-1"></i>Xem
                                     </a>
-                                    <button class="btn btn-custom btn-sm flex-fill rounded-pill"
-        data-add-cart="<?= $item['id'] ?>"
-        data-size=""
-        data-qty="1">
-    Thêm giỏ
-</button>
+                                    <a href="giohang.php?action=add&id=<?= $item['id'] ?>"
+                                       class="btn btn-custom btn-sm flex-fill rounded-pill">
+                                        Thêm giỏ
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -388,7 +414,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <!-- ===== VỀ VÂN Y CÁC ===== -->
 <div class="container-fluid py-5 my-5"
      style="background: linear-gradient(rgba(139,0,0,0.85),rgba(139,0,0,0.85)),
-            url('image/dainam.jpg') fixed center center; background-size: cover;">
+            url('./image/banner.jpg') fixed center center; background-size: cover;">
     <div class="container text-center text-white py-5" data-aos="zoom-in-up">
         <h2 class="fw-bold text-warning mb-4 title-custom">Về Vân Y Các</h2>
         <div class="bg-warning mx-auto mb-4" style="width: 80px; height: 2px;"></div>

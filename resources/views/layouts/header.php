@@ -47,6 +47,12 @@ if (isset($active_dm_id)) {
 }
 
 $current_slug  = $_GET['slug'] ?? '';
+// --- THÊM ĐOẠN NÀY ĐỂ FIX LỖI ---
+$id_co_phuc = null;
+$id_truyen_thong = null;
+$menu_co_phuc = [];
+$menu_truyen_thong = [];
+// -------------------------------
 
 // 1. Tìm ID của 2 danh mục cha (Việt Cổ Phục & Truyền Thống)
 foreach ($_nav_dm as $dm) {
@@ -108,7 +114,24 @@ foreach ($menu_truyen_thong as $con) {
         padding: 12px 0;
         background-color: var(--dark-red) !important;
     }
-    .navbar-brand { font-family: var(--font-serif); letter-spacing: 1px; }
+    /* Style cho Logo Image */
+.logo-custom {
+    height: 50px;           /* Chiều cao cố định để không vỡ menu */
+    width: auto;            /* Chiều rộng tự động theo tỉ lệ */
+    margin-right: 12px;     /* Khoảng cách với chữ VÂN Y CÁC */
+    object-fit: contain;    /* Giữ ảnh nguyên vẹn trong khung */
+    display: block;         /* Đảm bảo ảnh được coi là một khối hiển thị */
+    
+    /* Fix lỗi ảnh bị mờ hoặc ẩn trên một số trình duyệt Mac */
+    image-rendering: -webkit-optimize-contrast;
+}
+
+/* Căn giữa chữ và logo trên thanh Navbar */
+.navbar-brand {
+    display: flex;
+    align-items: center;
+}
+   
 
     /* LINK BÌNH THƯỜNG */
     .nav-link { 
@@ -176,9 +199,10 @@ foreach ($menu_truyen_thong as $con) {
 
 <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
     <div class="container-fluid px-4">
-        <a class="navbar-brand fw-bold text-warning fs-3" href="index.php">
-            <i class="fas fa-fan me-2"></i>VÂN Y CÁC
-        </a>
+<a class="navbar-brand d-flex align-items-center" href="index.php">
+    <img src="image/logo.png" class="logo-custom" alt="Logo">
+    <span class="fw-bold text-warning fs-3">VÂN Y CÁC</span>
+</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -221,7 +245,7 @@ foreach ($menu_truyen_thong as $con) {
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="#">Câu Chuyện AI</a>
+                    <a class="nav-link" href="tuvan.php">Tư Vấn AI</a>
                 </li>
             </ul>
 
