@@ -361,10 +361,12 @@ document.addEventListener('DOMContentLoaded', function () {
                                        class="btn btn-outline-danger btn-sm flex-fill rounded-pill">
                                         <i class="fas fa-eye me-1"></i>Xem
                                     </a>
-                                    <a href="giohang.php?action=add&id=<?= $item['id'] ?>"
-                                       class="btn btn-custom btn-sm flex-fill rounded-pill">
-                                        Thêm giỏ
-                                    </a>
+                                    <button class="btn btn-custom btn-sm flex-fill rounded-pill"
+        data-add-cart="<?= $item['id'] ?>"
+        data-size=""
+        data-qty="1">
+    Thêm giỏ
+</button>
                                 </div>
                             </div>
                         </div>

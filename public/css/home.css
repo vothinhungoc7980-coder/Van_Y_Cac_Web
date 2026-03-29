@@ -1,0 +1,10 @@
+.hero-banner {
+    position: relative;
+    height: 90vh;
+   background: url('image/dai1.jpg') no-repeat center center/cover;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: white;
+}
