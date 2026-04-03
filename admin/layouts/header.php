@@ -5,19 +5,25 @@ if (!isset($conn)) require_once __DIR__ . '/../config/db.php';
 
 $depth = $depth ?? 1;
 $base  = str_repeat('../', $depth);
-
 $cnt_don = (int)($conn->query("SELECT COUNT(*) c FROM don_hang WHERE trang_thai_dh='Chờ xác nhận'")->fetch_assoc()['c'] ?? 0);
-$cnt_dg  = (int)($conn->query("SELECT COUNT(*) c FROM danh_gia WHERE trang_thai='Chờ duyệt'")->fetch_assoc()['c'] ?? 0);
 
-// Cảnh báo tài khoản hủy đơn >= 3 lần
+// SỬA: Đếm số đánh giá "Chưa trả lời" (thay vì chờ duyệt)
+$cnt_dg  = (int)($conn->query("SELECT COUNT(*) c FROM danh_gia WHERE (phan_hoi_admin IS NULL OR phan_hoi_admin = '')")->fetch_assoc()['c'] ?? 0);
+
+// THÊM: Đếm số sản phẩm đã hết hàng trong kho
+$cnt_hethang = (int)($conn->query("SELECT COUNT(*) c FROM san_pham WHERE so_luong_ton <= 0 AND trang_thai=1")->fetch_assoc()['c'] ?? 0);
+
+// Cảnh báo tài khoản hủy đơn >= 3 lần (Bom hàng)
 $cnt_warn = (int)($conn->query("
     SELECT COUNT(DISTINCT id_khach_hang) c FROM (
         SELECT id_khach_hang, COUNT(*) cnt FROM don_hang
      WHERE trang_thai_dh='Đã hủy' AND id_khach_hang IS NOT NULL AND (ghi_chu IS NULL OR ghi_chu NOT LIKE '%[Admin hủy]%')
         GROUP BY id_khach_hang HAVING cnt >= 3
     ) t")->fetch_assoc()['c'] ?? 0);
-
-$cnt_all = $cnt_don + $cnt_dg + $cnt_warn;
+// Đếm số lượng khách hàng đang có tin nhắn chưa đọc
+$cnt_chat = (int)($conn->query("SELECT COUNT(DISTINCT id_khach_hang) c FROM tin_nhan WHERE nguoi_gui='khach' AND da_doc=0")->fetch_assoc()['c'] ?? 0);
+// Cộng tổng 5 loại thông báo
+$cnt_all = $cnt_don + $cnt_dg + $cnt_warn + $cnt_hethang +$cnt_chat;
 $admin_name = htmlspecialchars($_SESSION['ho_ten'] ?? 'Admin');
 $admin_init = mb_strtoupper(mb_substr($_SESSION['ho_ten'] ?? 'A', 0, 1));
 ?>
@@ -219,6 +225,10 @@ body.admin-body{font-family:var(--fb);background:var(--bg);color:var(--text);dis
     <a href="<?= $base ?>admin/panel.php?page=danh-gia" class="sb-link <?= ($active_menu??'')==='danh_gia'?'active':'' ?>">
       <i class="fas fa-star"></i><span class="sb-link-txt sb-txt">Đánh Giá</span>
       <?php if($cnt_dg>0):?><span class="sb-badge green"><?=$cnt_dg?></span><?php endif?></a>
+      <a href="<?= $base ?>admin/panel.php?page=chat" class="sb-link <?= ($page??'')==='chat'?'active':'' ?>">
+      <i class="fas fa-comments"></i><span class="sb-link-txt sb-txt">Tin Nhắn (Chat)</span>
+      <?php if(isset($cnt_chat) && $cnt_chat > 0): ?><span class="sb-badge" style="background:#3B82F6"><?= $cnt_chat ?></span><?php endif; ?>
+    </a>
 
     <div class="sb-section">Báo Cáo</div>
     <a href="<?= $base ?>admin/panel.php?page=doanh-thu" class="sb-link <?= ($active_menu??'')==='doanh_thu'?'active':'' ?>">
@@ -245,31 +255,57 @@ body.admin-body{font-family:var(--fb);background:var(--bg);color:var(--text);dis
           <i class="fas fa-bell"></i>
           <span class="tb-bell-dot"><?= $cnt_all ?></span>
         </button>
-        <div class="bell-drop" id="bellDrop">
+     <div class="bell-drop" id="bellDrop">
           <div class="bell-hd">
             <span><i class="fas fa-bell me-1" style="color:var(--cr)"></i> Thông Báo</span>
             <span style="font-size:.72rem;color:var(--mu)"><?= $cnt_all ?> mới</span>
           </div>
+
           <?php if($cnt_don > 0): ?>
-          <a href="<?= $base ?>admin/panel.php?page=don-hang?tab=cho" class="bell-item">
-            <div class="bell-ico red"><i class="fas fa-box"></i></div>
+          <a href="<?= $base ?>admin/panel.php?page=don-hang&tab=cho" class="bell-item">
+            <div class="bell-ico" style="background:#DBEAFE;color:#1D4ED8"><i class="fas fa-box"></i></div>
             <div><div class="bell-txt"><?= $cnt_don ?> đơn hàng chờ xác nhận</div>
-            <div class="bell-sub">Cần xử lý ngay</div></div>
+            <div class="bell-sub">Cần gọi điện và xử lý ngay</div></div>
           </a>
           <?php endif; ?>
+
+          <?php if($cnt_chat > 0): ?>
+          <a href="<?= $base ?>admin/panel.php?page=chat" class="bell-item">
+            <div class="bell-ico" style="background:#E0E7FF;color:#4338CA"><i class="fas fa-comments"></i></div>
+            <div><div class="bell-txt"><?= $cnt_chat ?> khách hàng đang nhắn tin</div>
+            <div class="bell-sub">Vào chat ngay để hỗ trợ</div></div>
+          </a>
+          <?php endif; ?>
+
           <?php if($cnt_dg > 0): ?>
-          <a href="<?= $base ?>admin/panel.php?page=danh-gia?tab=cho" class="bell-item">
+          <a href="<?= $base ?>admin/panel.php?page=danh-gia&tab=chuatl" class="bell-item">
             <div class="bell-ico green"><i class="fas fa-star"></i></div>
-            <div><div class="bell-txt"><?= $cnt_dg ?> đánh giá chờ duyệt</div>
-            <div class="bell-sub">Xem và phê duyệt</div></div>
+            <div><div class="bell-txt"><?= $cnt_dg ?> đánh giá chưa trả lời</div>
+            <div class="bell-sub">Vào phản hồi cảm ơn khách hàng</div></div>
           </a>
           <?php endif; ?>
-          <?php if($cnt_warn > 0): ?>
-          <a href="<?= $base ?>admin/panel.php?page=khach-hang?filter=huy_nhieu" class="bell-item">
-            <div class="bell-ico orange"><i class="fas fa-exclamation-triangle"></i></div>
-            <div><div class="bell-txt"><?= $cnt_warn ?> tài khoản hủy đơn ≥3 lần</div>
-            <div class="bell-sub">Xem xét khóa tài khoản</div></div>
+
+          <?php if($cnt_hethang > 0): ?>
+          <a href="<?= $base ?>admin/panel.php?page=san-pham&tk=hethang" class="bell-item">
+            <div class="bell-ico red"><i class="fas fa-exclamation-circle"></i></div>
+            <div><div class="bell-txt"><?= $cnt_hethang ?> sản phẩm đã hết hàng</div>
+            <div class="bell-sub">Cần cập nhật thêm tồn kho</div></div>
           </a>
+          <?php endif; ?>
+
+          <?php if($cnt_warn > 0): ?>
+          <a href="<?= $base ?>admin/panel.php?page=khach-hang" class="bell-item">
+            <div class="bell-ico orange"><i class="fas fa-user-slash"></i></div>
+            <div><div class="bell-txt"><?= $cnt_warn ?> khách hàng bom đơn</div>
+            <div class="bell-sub">Hủy ≥ 3 lần, cần xem xét khóa</div></div>
+          </a>
+          <?php endif; ?>
+
+          <?php if($cnt_all == 0): ?>
+          <div style="padding:25px 20px; text-align:center; color:var(--mu); font-size:0.9rem;">
+              <i class="fas fa-check-circle" style="font-size:2rem; color:#10B981; margin-bottom:10px; display:block;"></i>
+              Tuyệt vời! Không có thông báo nào tồn đọng.
+          </div>
           <?php endif; ?>
         </div>
       </div>

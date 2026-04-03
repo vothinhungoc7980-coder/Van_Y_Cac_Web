@@ -153,7 +153,7 @@ include 'resources/views/layouts/header.php';
 </div>
 <div class="bc">
     <div class="bc-inner">
-        <a href="index.php">Trang chủ</a><span class="sep">/</span><span>Giỏ Hàng</span>
+       <a href="index.php">Trang chủ</a><span class="sep">/</span><a href="bosuutap.php">Bộ sưu tập</a><span class="sep">/</span><span>Giỏ Hàng</span>
     </div>
 </div>
 

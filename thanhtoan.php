@@ -51,7 +51,7 @@ while ($r = $rs->fetch_assoc()) {
 }
 if (empty($order_items)) { header('Location: giohang.php'); exit; }
 
-$phi_ship   = $tong_tien >= 500000 ? 0 : 30000;
+$phi_ship   = $tong_tien >= 1000000 ? 0 : 30000;
 $thanh_tien = $tong_tien + $phi_ship;
 
 // Lấy thông tin user
@@ -91,21 +91,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dat_hang'])) {
 
         if ($conn->query($sql)) {
             $don_id = $conn->insert_id;
-            foreach ($order_items as $oi) {
+           foreach ($order_items as $oi) {
                 $tn_e  = $conn->real_escape_string($oi['ten_vi']);
                 $img_e = $conn->real_escape_string($oi['duong_dan'] ?? '');
+                
+                // Lấy size từ giỏ hàng và bọc lại an toàn
+                $sz_e  = $conn->real_escape_string($oi['size'] ?? ''); 
+                
+                // Đã thêm cột "size" vào lệnh INSERT
                 $conn->query("INSERT INTO chi_tiet_don_hang
-                    (id_don_hang, id_san_pham, ten_san_pham, gia_ban, so_luong, thanh_tien, hinh_anh)
-                    VALUES ($don_id, {$oi['sp_id']}, '$tn_e', {$oi['gia_ban']}, {$oi['so_luong']}, {$oi['tien_dong']}, '$img_e')");
+                    (id_don_hang, id_san_pham, ten_san_pham, gia_ban, so_luong, thanh_tien, hinh_anh, size)
+                    VALUES ($don_id, {$oi['sp_id']}, '$tn_e', {$oi['gia_ban']}, {$oi['so_luong']}, {$oi['tien_dong']}, '$img_e', '$sz_e')");
                 $conn->query("UPDATE san_pham SET
                     so_luong_ton = GREATEST(0, so_luong_ton - {$oi['so_luong']}),
                     da_ban = da_ban + {$oi['so_luong']}
                     WHERE id = {$oi['sp_id']}");
             }
-            // Xóa sản phẩm đã đặt khỏi giỏ
+        // Xóa sản phẩm đã đặt khỏi giỏ
             $conn->query("DELETE FROM gio_hang WHERE id IN ($in_ids) AND id_khach_hang = $uid");
-            header("Location: trangcanhan.php?tab=orders&new_order=$don_id");
-            exit;
+            
+            // XỬ LÝ: NẾU LÀ COD THÌ CHUYỂN HƯỚNG, NẾU LÀ CHUYỂN KHOẢN/MOMO THÌ HIỆN QR
+            if ($pt_e === 'COD') {
+                header("Location: trangcanhan.php?tab=orders&new_order=$don_id");
+                exit;
+            } else {
+                $show_qr_order = $ma_dh;
+                $qr_amount = $thanh_tien;
+                $inserted_don_id = $don_id;
+            }
         } else {
             $order_error = 'Lỗi: ' . $conn->error . '. Vui lòng thử lại.';
         }
@@ -195,7 +208,64 @@ body{font-family:var(--fb);background:var(--pa);color:var(--ink)}
 </style>
 </head>
 <body>
+<?php if (isset($show_qr_order)): ?>
+<div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #FAF6EE; padding: 20px;">
+    <div style="background: #fff; padding: 40px; border-radius: 16px; box-shadow: 0 15px 40px rgba(139,0,0,0.1); text-align: center; max-width: 450px; width: 100%; border: 1px solid #E8E1D5;">
+        <h2 style="color: #8B0000; font-family: 'Cormorant Garamond', serif; font-weight: bold; margin-bottom: 5px;">Thanh Toán Đơn Hàng</h2>
+        <p style="color: #6B6B6B; margin-bottom: 25px;">Quét mã qua ứng dụng Ngân hàng hoặc MoMo</p>
 
+        <div style="background: #FFF8EE; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 2px dashed #C9A84C; display: inline-block;">
+            <<img src="https://img.vietqr.io/image/MB-0326513356-compact2.png?amount=<?=$qr_amount?>&addInfo=<?=$show_qr_order?>&accountName=VO%20THI%20NHU%20NGOC" alt="Mã QR Thanh Toán" style="max-width: 100%; border-radius: 8px;">
+                 alt="Mã QR Thanh Toán" style="max-width: 100%; border-radius: 8px;">
+        </div>
+
+        <div style="font-size: 1.4rem; font-weight: bold; color: #8B0000; margin-bottom: 5px;">
+            <?=number_format($qr_amount,0,',','.')?> ₫
+        </div>
+        <div style="font-size: 0.9rem; color: #1A0A0A; margin-bottom: 25px;">
+            Nội dung: <strong style="color: #8B0000;"><?=$show_qr_order?></strong>
+        </div>
+
+        <div id="qr-status" style="margin-bottom: 20px; font-weight: bold; padding: 12px; background: #f8f9fa; border-radius: 8px;">
+            <span id="qr-status-text" style="color: #C9A84C;"><i class="fas fa-spinner fa-spin me-2"></i>Hệ thống đang chờ nhận tiền...</span>
+            <div style="font-size: 0.8rem; color: #6b6b6b; margin-top: 5px; font-weight: normal;">Tự động xác nhận sau <span id="qr-timer">15</span> giây</div>
+        </div>
+
+        <button id="btn-paid-mock" onclick="completePayment()" style="background: linear-gradient(135deg, #8B0000, #5C0000); color: #fff; border: none; padding: 12px 30px; border-radius: 30px; font-weight: bold; cursor: pointer; transition: 0.3s; width: 100%;">
+            Tôi đã chuyển khoản xong
+        </button>
+    </div>
+</div>
+
+<script>
+    // Giả lập API tự động nhận diện thanh toán
+    let timeLeft = 15;
+    const timerEl = document.getElementById('qr-timer');
+    const interval = setInterval(() => {
+        timeLeft--;
+        if(timerEl) timerEl.innerText = timeLeft;
+        if(timeLeft <= 0) {
+            clearInterval(interval);
+            completePayment(); // Hết giờ tự động hoàn tất
+        }
+    }, 1000);
+
+    function completePayment() {
+        clearInterval(interval);
+        const statusText = document.getElementById('qr-status-text');
+        statusText.innerHTML = '<i class="fas fa-check-circle me-2"></i>Đã nhận được tiền! Đang xử lý...';
+        statusText.style.color = '#046C4E';
+        document.getElementById('qr-status').style.background = '#DEF7EC';
+        document.getElementById('btn-paid-mock').style.display = 'none';
+
+        // Chuyển hướng về trang đơn hàng
+        setTimeout(() => {
+            window.location.href = 'trangcanhan.php?tab=orders&new_order=<?=$inserted_don_id?>';
+        }, 2000);
+    }
+</script>
+
+<?php else: ?>
 <div class="page-hero">
   <div class="page-hero-inner">
     <h1><i class="fas fa-clipboard-list"></i> Xác Nhận Đặt Hàng</h1>
@@ -301,8 +371,8 @@ body{font-family:var(--fb);background:var(--pa);color:var(--ink)}
             <div id="bankInfo" style="display:none;margin-top:14px;background:#FFF8EE;border:1px solid var(--bd);border-radius:6px;padding:13px">
               <div style="font-size:.75rem;font-weight:700;color:var(--cr2);margin-bottom:8px;letter-spacing:.5px">THÔNG TIN CHUYỂN KHOẢN</div>
               <div style="font-size:.85rem;line-height:2">
-                <div>Ngân hàng: <strong>VietcomBank</strong></div>
-                <div>Số TK: <strong>1234 5678 9012</strong></div>
+                <div>Ngân hàng: <strong>MB Bank (Ngân hàng  Quân Đội)</strong></div>
+                <div>Số TK: <strong>0326513356</strong></div>
                 <div>Chủ TK: <strong>VÂN Y CÁC</strong></div>
                 <div>Nội dung: <strong style="color:var(--cr)">VYC + SĐT của bạn</strong></div>
               </div>
@@ -379,5 +449,6 @@ document.getElementById('orderForm').addEventListener('submit', function() {
 });
 }); // end DOMContentLoaded
 </script>
+<?php endif; ?>
 </body>
 </html>

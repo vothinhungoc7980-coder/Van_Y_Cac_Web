@@ -35,8 +35,8 @@ if (!empty($sp['hinh_anh_phu'])) {
 
 $sp_lq = $conn->query("SELECT id, ten_vi, gia_ban, gia_goc, duong_dan, noi_bat FROM san_pham WHERE id_danh_muc={$sp['id_danh_muc']} AND id!=$id AND trang_thai=1 ORDER BY da_ban DESC LIMIT 4");
 
-$dg_list = $conn->query("SELECT dg.*, kh.TaiKhoan FROM danh_gia dg LEFT JOIN khachhang kh ON dg.id_khach_hang = kh.idKhachHang WHERE dg.id_san_pham=$id AND dg.trang_thai='Đã duyệt' ORDER BY dg.ngay_tao DESC LIMIT 10");
-$dg_tq = $conn->query("SELECT COUNT(*) tong, ROUND(AVG(so_sao),1) avg, SUM(so_sao=5) s5, SUM(so_sao=4) s4, SUM(so_sao=3) s3, SUM(so_sao=2) s2, SUM(so_sao=1) s1 FROM danh_gia WHERE id_san_pham=$id AND trang_thai='Đã duyệt'")->fetch_assoc();
+$dg_list = $conn->query("SELECT dg.*, kh.TaiKhoan FROM danh_gia dg LEFT JOIN khachhang kh ON dg.id_khach_hang = kh.idKhachHang WHERE dg.id_san_pham=$id AND dg.trang_thai IN ('Chưa trả lời', 'Đã trả lời') ORDER BY dg.ngay_tao DESC LIMIT 10");
+$dg_tq = $conn->query("SELECT COUNT(*) tong, ROUND(AVG(so_sao),1) avg, SUM(so_sao=5) s5, SUM(so_sao=4) s4, SUM(so_sao=3) s3, SUM(so_sao=2) s2, SUM(so_sao=1) s1 FROM danh_gia WHERE id_san_pham=$id AND trang_thai IN ('Chưa trả lời', 'Đã trả lời')")->fetch_assoc();
 
 $avg_sao  = $dg_tq['avg'] ?? 0;
 $tong_dg  = (int)($dg_tq['tong'] ?? 0);
@@ -265,7 +265,13 @@ include 'resources/views/layouts/header.php';
             </div>
             <?php endif; ?>
 
-            <?php if ($sp['so_luong_ton'] <= 0): ?>
+<?php if ($is_admin): ?>
+            <div class="d-grid mt-4">
+                <button disabled class="btn btn-lg" style="background:#f3f4f6; color:#6b7280; border: 1px dashed #9ca3af;">
+                    <i class="fas fa-shield-alt me-2"></i>Chế độ Admin: Không thể đặt hàng
+                </button>
+            </div>
+            <?php elseif ($sp['so_luong_ton'] <= 0): ?>
             <div class="d-grid mt-3">
                 <button disabled class="btn btn-secondary btn-lg">Hết Hàng</button>
             </div>
@@ -492,7 +498,9 @@ include 'resources/views/layouts/header.php';
                         
                         <div class="rel-overlay">
                             <button class="rel-btn rel-btn-view" onclick="window.location.href='sanpham.php?id=<?= $r['id'] ?>'"><i class="fas fa-eye me-1"></i>Xem Chi Tiết</button>
-                            <button class="rel-btn rel-btn-buy" onclick="handleRelCart(<?= $r['id'] ?>);"><i class="fas fa-shopping-bag me-1"></i>Chọn Mua</button>
+                           <?php if (!$is_admin): ?>
+<button class="rel-btn rel-btn-buy" onclick="handleRelCart(<?= $r['id'] ?>);"><i class="fas fa-shopping-bag me-1"></i>Chọn Mua</button>
+<?php endif; ?>
                         </div>
                     </div>
                     

@@ -244,8 +244,8 @@ foreach ($menu_truyen_thong as $con) {
                     </ul>
                 </li>
 
-                <li class="nav-item">
-                    <a class="nav-link" href="tuvan.php">Tư Vấn AI</a>
+             <li class="nav-item">
+                    <a class="nav-link <?= ($current_page == 'tuvan.php') ? 'active-page fw-bold' : '' ?>" href="tuvan.php">Tư Vấn AI</a>
                 </li>
             </ul>
 
@@ -333,4 +333,43 @@ foreach ($menu_truyen_thong as $con) {
     </div>
 </div>
 
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<style>
+#blossom-container{
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    pointer-events: none; z-index: 99999; overflow: hidden;
+}
+/* Hoa Mai */
+.petal {
+    position: absolute; background: radial-gradient(circle, #FFD700 30%, #F59E0B 100%);
+    border-radius: 15% 85% 15% 85%;
+    opacity: 0.8; filter: drop-shadow(0 0 3px rgba(255,215,0,0.5));
+    animation: fall linear forwards, sway ease-in-out infinite alternate;
+}
+@keyframes fall { 0% { top: -10%; transform: rotate(0deg); } 100% { top: 110%; transform: rotate(720deg); } }
+@keyframes sway { 0% { transform: translateX(0px); } 100% { transform: translateX(25px); } }
+</style>
+<div id="blossom-container"></div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // 1. Script tạo Hoa Mai Rơi
+    const blossomContainer = document.getElementById('blossom-container');
+    if (blossomContainer) {
+        function createPetal() {
+            const petal = document.createElement('div');
+            petal.classList.add('petal');
+            const size = Math.random() * 8 + 8;
+            petal.style.width = size + 'px';
+            petal.style.height = size + 'px';
+            petal.style.left = Math.random() * 100 + 'vw';
+            const fallDuration = Math.random() * 5 + 7; 
+            const swayDuration = Math.random() * 2 + 2; 
+            petal.style.animationDuration = `${fallDuration}s, ${swayDuration}s`;
+            blossomContainer.appendChild(petal);
+            setTimeout(() => { petal.remove(); }, fallDuration * 1000);
+        }
+        setInterval(createPetal, 600); // 600ms rơi 1 cánh
+    }
+});
+</script>

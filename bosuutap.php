@@ -365,10 +365,15 @@ include 'resources/views/layouts/header.php';
                         <img src="image/<?= htmlspecialchars($item['duong_dan']??'no-image.jpg') ?>"
                              onerror="this.src='https://placehold.co/400x500?text=Vân+Y+Các'"
                              alt="<?= htmlspecialchars($item['ten_vi']) ?>" class="product-img" loading="lazy">
-                        <div class="product-actions">
-                            <a href="sanpham.php?id=<?= $item['id'] ?>" class="action-btn"><i class="fas fa-eye me-1"></i>Xem Chi Tiết</a>
-                            <?php if (isset($_SESSION['user_id']) || isset($_SESSION['user'])): ?>
-                            <a href="sanpham.php?id=<?= $item['id'] ?>" class="action-btn action-btn-cart"><i class="fas fa-shopping-bag me-1"></i>Chọn Mua</a>
+                       <div class="product-actions">
+                            <button type="button" class="action-btn" style="border:none;" onclick="openQuickView(<?= $item['id'] ?>, '<?= htmlspecialchars(addslashes($item['ten_vi'])) ?>', <?= $item['gia_ban'] ?>, <?= $item['gia_goc'] ?? 0 ?>, '<?= htmlspecialchars($item['duong_dan'] ?? 'no-image.jpg') ?>')"><i class="fas fa-eye me-1"></i>Xem Nhanh</button>
+                         <?php 
+                            $is_admin_check = ($_SESSION['vai_tro'] ?? $_SESSION['user']['role'] ?? '') === 'Quản trị viên';
+                            if ($is_admin_check): 
+                            ?>
+                            <a href="#" onclick="alert('Chế độ Admin: Không thể đặt hàng!'); return false;" class="action-btn action-btn-cart" style="background:#f3f4f6; color:#6b7280; border-color:#9ca3af;"><i class="fas fa-shield-alt me-1"></i>Admin</a>
+                            <?php elseif (isset($_SESSION['user_id']) || isset($_SESSION['user'])): ?>
+                            <a href="sanpham.php?id=<?= $item['id'] ?>" class="action-btn action-btn-cart"><i class="fas fa-shopping-bag me-1"></i>Xem Chi Tiết</a>
                             <?php else: ?>
                             <a href="#" class="action-btn action-btn-cart" data-bs-toggle="modal" data-bs-target="#loginModal"><i class="fas fa-lock me-1"></i>Đăng Nhập</a>
                             <?php endif; ?>
@@ -416,7 +421,133 @@ include 'resources/views/layouts/header.php';
         </main>
     </div>
 </div>
+<div class="modal fade" id="quickViewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius: 12px; border: none; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.2);">
+            <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" style="z-index: 10; background-color: #fff; border-radius: 50%; padding: 10px; opacity: 0.8;"></button>
+            <div class="modal-body p-0">
+                <div class="row g-0">
+                    <div class="col-md-6 d-flex align-items-center justify-content-center p-4" style="background-color: #f8f9fa;">
+                        <img id="qv-img" src="" class="img-fluid rounded" alt="Sản phẩm" style="max-height: 450px; object-fit: contain;">
+                    </div>
+                    <div class="col-md-6 p-4 p-lg-5 d-flex flex-column justify-content-center">
+                        <h4 id="qv-name" class="fw-bold mb-3" style="font-family: 'EB Garamond', serif; color: #1A0A0A; font-size: 1.5rem; line-height: 1.4;"></h4>
+                        
+                        <div class="d-flex align-items-end mb-4 border-bottom pb-3">
+                            <span id="qv-price" class="fw-bold" style="color: #8B0000; font-size: 1.6rem; font-family: 'Cormorant Garamond', serif;"></span>
+                            <span id="qv-old-price" class="text-muted text-decoration-line-through ms-3 mb-1" style="font-size: 1rem;"></span>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="fw-bold mb-2 small text-uppercase" style="letter-spacing: 1px; color: #5a4a42;">Chọn Size:</label>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <input type="radio" class="btn-check" name="qv-size" id="size-s" value="S" checked>
+                                <label class="btn btn-outline-dark px-3 py-1" for="size-s">S</label>
+                                <input type="radio" class="btn-check" name="qv-size" id="size-m" value="M">
+                                <label class="btn btn-outline-dark px-3 py-1" for="size-m">M</label>
+                                <input type="radio" class="btn-check" name="qv-size" id="size-l" value="L">
+                                <label class="btn btn-outline-dark px-3 py-1" for="size-l">L</label>
+                                <input type="radio" class="btn-check" name="qv-size" id="size-xl" value="XL">
+                                <label class="btn btn-outline-dark px-3 py-1" for="size-xl">XL</label>
+                                 <input type="radio" class="btn-check" name="qv-size" id="size-2xl" value="2XL">
+                                <label class="btn btn-outline-dark px-3 py-1" for="size-2xl">2XL</label>
+                            </div>
+                        </div>
 
+                        <div class="mt-2 d-flex gap-3">
+                            <button type="button" id="qv-add-cart" class="btn flex-grow-1 fw-bold text-white py-3" style="background: linear-gradient(135deg, #8B0000, #5C0000); border: none; border-radius: 8px; letter-spacing: 1px;">THÊM VÀO GIỎ</button>
+                            <a href="#" id="qv-detail-link" class="btn btn-outline-dark py-3 px-4" style="border-radius: 8px; font-weight: 600;">Xem chi tiết</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+// Hàm mở Popup Xem Nhanh
+function openQuickView(id, name, price, oldPrice, img) {
+    // Đổ dữ liệu vào Popup
+    document.getElementById('qv-name').textContent = name;
+    document.getElementById('qv-price').textContent = new Intl.NumberFormat('vi-VN').format(price) + ' ₫';
+    
+    const oldPriceEl = document.getElementById('qv-old-price');
+    if (oldPrice > price) {
+        oldPriceEl.textContent = new Intl.NumberFormat('vi-VN').format(oldPrice) + ' ₫';
+        oldPriceEl.style.display = 'inline';
+    } else {
+        oldPriceEl.style.display = 'none';
+    }
+    
+    document.getElementById('qv-img').src = 'image/' + img;
+    document.getElementById('qv-detail-link').href = 'sanpham.php?id=' + id;
+    
+    // Gán ID sản phẩm vào nút Thêm giỏ hàng
+    const btnAdd = document.getElementById('qv-add-cart');
+    btnAdd.onclick = function() {
+        const size = document.querySelector('input[name="qv-size"]:checked').value;
+        themVaoGioNhanh(id, size, this);
+    };
+    
+    // Hiển thị Popup
+    const modal = new bootstrap.Modal(document.getElementById('quickViewModal'));
+    modal.show();
+}
+
+// Hàm Xử lý thêm vào giỏ hàng bằng AJAX
+async function themVaoGioNhanh(id_sp, size, btnElement) {
+    <?php 
+    $is_admin_check = ($_SESSION['vai_tro'] ?? $_SESSION['user']['role'] ?? '') === 'Quản trị viên';
+    if($is_admin_check): 
+    ?>
+    alert('Chế độ Admin: Không thể thêm vào giỏ hàng!');
+    return;
+    <?php endif; ?>
+    const isLogged = document.body.getAttribute('data-logged') === '1' || <?= isset($_SESSION['user_id']) ? 'true' : 'false' ?>;
+    if (!isLogged) {
+        bootstrap.Modal.getInstance(document.getElementById('quickViewModal')).hide();
+        const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+        loginModal.show();
+        return;
+    }
+
+    const oldText = btnElement.innerText;
+    btnElement.innerText = 'ĐANG THÊM...';
+    btnElement.disabled = true;
+
+    try {
+        const res = await fetch('public/api.php?action=cart', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ action:'add', id_san_pham: id_sp, size: size, so_luong: 1 })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            btnElement.innerText = '✓ ĐÃ THÊM';
+            btnElement.style.background = '#2E7D32';
+            
+            // Cập nhật số lượng trên chuông giỏ hàng
+            document.querySelectorAll('#cartBadge, .cart-badge').forEach(b => b.textContent = data.cart_count);
+            
+            setTimeout(() => {
+                bootstrap.Modal.getInstance(document.getElementById('quickViewModal')).hide();
+                btnElement.innerText = oldText;
+                btnElement.style.background = 'linear-gradient(135deg, #8B0000, #5C0000)';
+                btnElement.disabled = false;
+            }, 1000);
+        } else {
+            alert(data.message || 'Có lỗi xảy ra!');
+            btnElement.innerText = oldText;
+            btnElement.disabled = false;
+        }
+    } catch(e) { 
+        alert('Lỗi kết nối máy chủ!'); 
+        btnElement.innerText = oldText;
+        btnElement.disabled = false;
+    }
+}
+</script>
 <?php include 'resources/views/layouts/footer.php'; ?>
 
 </body></html>

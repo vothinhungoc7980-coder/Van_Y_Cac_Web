@@ -33,6 +33,6 @@ $nd_esc = $conn->real_escape_string($noi_dung);
 
 // Mặc định trạng thái là 'Đã duyệt' để hiện luôn ra web
 $conn->query("INSERT INTO danh_gia(id_san_pham, id_khach_hang, ho_ten, so_sao, noi_dung, trang_thai, ngay_tao)
-    VALUES($sp_id, $uid, '$ho_ten', $so_sao, '$nd_esc', 'Đã duyệt', NOW())");
+    VALUES($sp_id, $uid, '$ho_ten', $so_sao, '$nd_esc', 'Chưa trả lời', NOW())");
 
 echo json_encode(['success'=>true,'message'=>'Đánh giá của bạn đã được đăng!']);

@@ -287,20 +287,25 @@ elseif ($page === 'don-hang' && !$id):
 $tab=$_GET['tab']??'all'; $s=trim($_GET['s']??''); $pg=max(1,(int)($_GET['pg']??1)); $lim=15; $off=($pg-1)*$lim;
 $cond="WHERE 1";
 if($tab==='cho')  $cond.=" AND trang_thai_dh='Chờ xác nhận'";
+elseif($tab==='xacnhan') $cond.=" AND trang_thai_dh='Đã xác nhận'"; // Thêm dòng này
 elseif($tab==='giao') $cond.=" AND trang_thai_dh='Đang giao'";
 elseif($tab==='ht')   $cond.=" AND trang_thai_dh='Hoàn thành'";
 elseif($tab==='huy')  $cond.=" AND trang_thai_dh='Đã hủy'";
+
 if($s) $cond.=" AND (ma_don_hang LIKE '%".($conn->real_escape_string($s))."%' OR ho_ten LIKE '%".($conn->real_escape_string($s))."%' OR so_dien_thoai LIKE '%".($conn->real_escape_string($s))."%')";
+
 $tabs_cnt=[];
-foreach(['all'=>'',' cho'=>"AND trang_thai_dh='Chờ xác nhận'",'giao'=>"AND trang_thai_dh='Đang giao'",'ht'=>"AND trang_thai_dh='Hoàn thành'",'huy'=>"AND trang_thai_dh='Đã hủy'"] as $k=>$w)
+// Thêm 'xacnhan' vào mảng đếm số lượng
+foreach(['all'=>'','cho'=>"AND trang_thai_dh='Chờ xác nhận'", 'xacnhan'=>"AND trang_thai_dh='Đã xác nhận'", 'giao'=>"AND trang_thai_dh='Đang giao'",'ht'=>"AND trang_thai_dh='Hoàn thành'",'huy'=>"AND trang_thai_dh='Đã hủy'"] as $k=>$w)
   $tabs_cnt[trim($k)]=(int)$conn->query("SELECT COUNT(*) v FROM don_hang WHERE 1 $w")->fetch_assoc()['v'];
+
 $total=(int)$conn->query("SELECT COUNT(*) v FROM don_hang $cond")->fetch_assoc()['v'];
 $pages=max(1,(int)ceil($total/$lim));
 $rows=$conn->query("SELECT * FROM don_hang $cond ORDER BY ngay_tao DESC LIMIT $lim OFFSET $off");
 $bdg=['Chờ xác nhận'=>'b-warning','Đã xác nhận'=>'b-info','Đang giao'=>'b-purple','Hoàn thành'=>'b-success','Đã hủy'=>'b-danger'];
 ?>
 <div class="tab-nav">
-  <?php foreach(['all'=>['Tất Cả',$tabs_cnt['all']],'cho'=>['Chờ Xác Nhận',$tabs_cnt['cho']],'giao'=>['Đang Giao',$tabs_cnt['giao']],'ht'=>['Hoàn Thành',$tabs_cnt['ht']],'huy'=>['Đã Hủy',$tabs_cnt['huy']]] as $k=>[$lbl,$cnt]):?>
+  <?php foreach(['all'=>['Tất Cả',$tabs_cnt['all']],'cho'=>['Chờ Xác Nhận',$tabs_cnt['cho']], 'xacnhan'=>['Đã Xác Nhận',$tabs_cnt['xacnhan']], 'giao'=>['Đang Giao',$tabs_cnt['giao']],'ht'=>['Hoàn Thành',$tabs_cnt['ht']],'huy'=>['Đã Hủy',$tabs_cnt['huy']]] as $k=>[$lbl,$cnt]):?>
   <button class="tab-btn <?=$tab===$k?'active':''?>" onclick="location.href='panel.php?page=don-hang&tab=<?=$k?>'">
     <?=$lbl?> <span class="badge <?=$k==='cho'&&$cnt>0?'b-danger':'b-gray'?>"><?=$cnt?></span>
   </button>
@@ -324,20 +329,29 @@ $bdg=['Chờ xác nhận'=>'b-warning','Đã xác nhận'=>'b-info','Đang giao'
     <td><div style="font-weight:700;font-size:.84rem"><?=htmlspecialchars($d['ho_ten'])?></div><div class="text-xs text-muted"><?=htmlspecialchars($d['so_dien_thoai'])?></div></td>
     <td style="font-weight:700;font-size:.84rem"><?=number_format($d['thanh_tien'],0,',','.')?> ₫</td>
     <td><span class="badge <?=$d['trang_thai_tt']==='Đã thanh toán'?'b-success':'b-warning'?>"><?=$d['trang_thai_tt']?></span></td>
-    <td>
-      <?php if($d['trang_thai_dh']==='Đã hủy'): ?>
-      <span class="badge b-danger">Đã Hủy</span>
+  <td>
+      <?php 
+      $tt_dh = $d['trang_thai_dh'];
+      if ($tt_dh === 'Đã hủy'): ?>
+          <span class="badge b-danger" style="padding:6px 10px;">Đã Hủy</span>
+      <?php elseif ($tt_dh === 'Hoàn thành'): ?>
+          <span class="badge b-success" style="padding:6px 10px;"><i class="fas fa-check-double me-1"></i>Hoàn thành</span>
       <?php else: ?>
-      <form method="POST" style="display:inline-flex;align-items:center;gap:6px">
-        <input type="hidden" name="did" value="<?=$d['id']?>">
-        <input type="hidden" name="trang_thai_tt" value="<?=htmlspecialchars($d['trang_thai_tt'])?>">
-        <select name="trang_thai_dh" class="fctrl" style="padding:4px 8px;font-size:.78rem;min-width:140px" onchange="this.form.submit()">
-          <?php foreach(['Chờ xác nhận','Đã xác nhận','Đang giao','Hoàn thành','Đã hủy'] as $st):?>
-          <option <?=$d['trang_thai_dh']===$st?'selected':''?>><?=$st?></option>
-          <?php endforeach?>
-        </select>
-      </form>
-      <?php endif?>
+          <form method="POST" style="margin:0; display:inline-block;">
+              <input type="hidden" name="did" value="<?=$d['id']?>">
+              <input type="hidden" name="trang_thai_tt" value="<?=htmlspecialchars($d['trang_thai_tt'])?>">
+              
+              <?php if ($tt_dh === 'Chờ xác nhận'): ?>
+                  <button type="submit" name="trang_thai_dh" value="Đã xác nhận" class="btn btn-primary btn-sm" style="font-size:0.75rem; padding:4px 10px; font-weight:600;"><i class="fas fa-check me-1"></i>Xác nhận</button>
+                  
+              <?php elseif ($tt_dh === 'Đã xác nhận'): ?>
+                  <button type="submit" name="trang_thai_dh" value="Đang giao" class="btn btn-sm" style="background:#8B5CF6; color:#fff; font-size:0.75rem; padding:4px 10px; font-weight:600;"><i class="fas fa-truck me-1"></i>Giao hàng</button>
+                  
+              <?php elseif ($tt_dh === 'Đang giao'): ?>
+                  <button type="submit" name="trang_thai_dh" value="Hoàn thành" class="btn btn-success btn-sm" style="font-size:0.75rem; padding:4px 10px; font-weight:600;" onclick="return confirm('Xác nhận khách đã nhận hàng thành công?');"><i class="fas fa-box-open me-1"></i>Đã giao</button>
+              <?php endif; ?>
+          </form>
+      <?php endif; ?>
     </td>
     <td class="text-xs text-muted"><?=date('d/m/Y H:i',strtotime($d['ngay_tao']))?></td>
     <td><a href="panel.php?page=don-hang&id=<?=$d['id']?>" class="ibtn ib-view"><i class="fas fa-eye"></i></a></td>
@@ -392,13 +406,45 @@ $cur_s=array_search($dh['trang_thai_dh'],$steps);
       </table>
     </div></div>
     <?php if(!$is_huy): ?>
-    <div class="card"><div class="card-hd"><div class="card-title">Cập Nhật</div></div><div class="card-bd">
+    <div class="card"><div class="card-hd"><div class="card-title">Cập Nhật Đơn Hàng</div></div><div class="card-bd">
       <form method="POST">
-        <div class="fg"><label class="fl">Trạng Thái Đơn</label>
-          <select name="trang_thai_dh" class="fctrl"><?php foreach(['Chờ xác nhận','Đã xác nhận','Đang giao','Hoàn thành','Đã hủy'] as $st):?><option <?=$dh['trang_thai_dh']===$st?'selected':''?>><?=$st?></option><?php endforeach?></select></div>
+        <input type="hidden" name="did" value="<?=$dh['id']?>">
+        
         <div class="fg"><label class="fl">Trạng Thái Thanh Toán</label>
-          <select name="trang_thai_tt" class="fctrl"><?php foreach(['Chờ thanh toán','Đã thanh toán','Hoàn tiền'] as $st):?><option <?=$dh['trang_thai_tt']===$st?'selected':''?>><?=$st?></option><?php endforeach?></select></div>
-        <button type="submit" class="btn btn-primary" onclick="return this.form.trang_thai_dh.value==='Đã hủy'?confirm('Hủy đơn sẽ hoàn kho tự động. Xác nhận?'):true"><i class="fas fa-save"></i> Cập Nhật</button>
+          <div style="display:flex; gap:10px; align-items:center;">
+              <select name="trang_thai_tt" class="fctrl" style="flex:1;">
+                  <?php foreach(['Chờ thanh toán','Đã thanh toán','Hoàn tiền'] as $st):?>
+                  <option <?=$dh['trang_thai_tt']===$st?'selected':''?>><?=$st?></option>
+                  <?php endforeach?>
+              </select>
+              <button type="submit" name="trang_thai_dh" value="<?=$dh['trang_thai_dh']?>" class="btn btn-secondary btn-sm" style="padding: 8px 15px;"><i class="fas fa-save"></i> Lưu TT</button>
+          </div>
+        </div>
+
+        <hr style="border:0; border-top:1px dashed #E8E1D5; margin:15px 0;">
+
+        <div class="fg" style="margin-bottom:0;"><label class="fl" style="color:#8B0000; font-weight:700;"><i class="fas fa-tasks me-1"></i> Quy Trình Xử Lý Giao Hàng</label>
+            <div style="display:flex; gap:10px; flex-wrap: wrap; margin-top: 10px;">
+                <?php $tt_cur = $dh['trang_thai_dh']; ?>
+                
+                <?php if ($tt_cur === 'Chờ xác nhận'): ?>
+                    <button type="submit" name="trang_thai_dh" value="Đã xác nhận" class="btn btn-primary" style="font-weight:600;"><i class="fas fa-check-circle me-1"></i> Xác nhận đơn</button>
+                    <button type="submit" name="trang_thai_dh" value="Đã hủy" class="btn btn-outline-danger" style="font-weight:600;" onclick="return confirm('Khách hủy đơn / Bạn muốn hủy đơn này? Kho sẽ tự động hoàn lại sản phẩm.');"><i class="fas fa-times-circle me-1"></i> Hủy đơn</button>
+                
+                <?php elseif ($tt_cur === 'Đã xác nhận'): ?>
+                    <button type="submit" name="trang_thai_dh" value="Đang giao" class="btn" style="background:#8B5CF6; color:#fff; font-weight:600;"><i class="fas fa-truck me-1"></i> Bàn giao Vận chuyển</button>
+                
+                <?php elseif ($tt_cur === 'Đang giao'): ?>
+                    <button type="submit" name="trang_thai_dh" value="Hoàn thành" class="btn btn-success" style="font-weight:600;" onclick="return confirm('Xác nhận khách đã nhận hàng thành công?');"><i class="fas fa-box-open me-1"></i> Giao Thành Công</button>
+                    <button type="submit" name="trang_thai_dh" value="Đã hủy" class="btn btn-warning" style="font-weight:600; color:#854D0E;" onclick="return confirm('Khách bom hàng / Hoàn về kho?');"><i class="fas fa-undo me-1"></i> Giao Thất Bại (Hoàn hàng)</button>
+                
+                <?php elseif ($tt_cur === 'Hoàn thành'): ?>
+                    <div style="background:#DEF7EC; color:#046C4E; padding:10px 15px; border-radius:8px; font-weight:600; width:100%; border:1px solid #31C48D;">
+                        <i class="fas fa-check-double me-1"></i> Đơn hàng đã Giao Thành Công
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
       </form>
     </div></div>
     <?php endif?>
@@ -407,7 +453,14 @@ $cur_s=array_search($dh['trang_thai_dh'],$steps);
     <div class="card-bd-flush"><table class="dtable"><thead><tr><th>Ảnh</th><th>Sản Phẩm</th><th>Giá</th><th>SL</th><th>Thành Tiền</th></tr></thead><tbody>
     <?php while($it=$items->fetch_assoc()):?>
     <tr><td><?php if($it['hinh_anh']):?><img src="../image/<?=htmlspecialchars($it['hinh_anh'])?>" class="tbl-thumb" onerror="this.src='https://placehold.co/46x46?text=SP'"><?php else:?><div class="tbl-img-placeholder"><i class="fas fa-box"></i></div><?php endif?></td>
-    <td style="font-weight:600;font-size:.84rem"><?=htmlspecialchars($it['ten_san_pham'])?></td>
+ <td style="font-weight:600;font-size:.84rem">
+        <?=htmlspecialchars($it['ten_san_pham'])?>
+        <?php if (!empty($it['size'])): ?>
+            <div style="margin-top: 4px;">
+                <span class="badge" style="background:#333; color:#fff; font-size:0.7rem; padding: 3px 8px;">Size: <?= htmlspecialchars($it['size']) ?></span>
+            </div>
+        <?php endif; ?>
+    </td>
     <td class="text-sm"><?=number_format($it['gia_ban'],0,',','.')?> ₫</td>
     <td><strong><?=$it['so_luong']?></strong></td>
     <td style="font-weight:700;color:var(--cr)"><?=number_format($it['thanh_tien'],0,',','.')?> ₫</td></tr>
@@ -421,13 +474,13 @@ $cur_s=array_search($dh['trang_thai_dh'],$steps);
   </div>
 </div>
 <?php } 
-
 // ────────────────── SẢN PHẨM (DANH SÁCH) ──────────────────
 elseif ($page === 'san-pham'):
     $s    = trim($_GET['s']??'');
     $dm   = (int)($_GET['dm']??0);
     $tt   = $_GET['tt']??'';
     $nb   = $_GET['nb']??'';
+    $tk   = $_GET['tk']??''; // BỘ LỌC TỒN KHO MỚI
     $pg   = max(1,(int)($_GET['pg']??1));
     $lim  = 15; $off=($pg-1)*$lim;
 
@@ -436,6 +489,11 @@ elseif ($page === 'san-pham'):
     if($dm) $w.=" AND sp.id_danh_muc=$dm";
     if($tt!=='') $w.=" AND sp.trang_thai=".($tt==='1'?1:0);
     if($nb==='1') $w.=" AND sp.noi_bat=1";
+    if($tk==='hethang') $w.=" AND sp.so_luong_ton <= 0";
+    if($tk==='saphet') $w.=" AND sp.so_luong_ton > 0 AND sp.so_luong_ton <= 5";
+
+    // Đếm số lượng sản phẩm hết hàng để làm nút cảnh báo
+    $cnt_hethang = (int)$conn->query("SELECT COUNT(*) v FROM san_pham WHERE so_luong_ton <= 0")->fetch_assoc()['v'];
 
     $total=(int)$conn->query("SELECT COUNT(*) v FROM san_pham sp $w")->fetch_assoc()['v'];
     $pages=max(1,(int)ceil($total/$lim));
@@ -444,7 +502,12 @@ elseif ($page === 'san-pham'):
 ?>
 <div class="page-actions">
   <div class="text-sm text-muted">Hiển thị <strong><?=number_format($total)?></strong> sản phẩm</div>
-  <a href="panel.php?page=form-san-pham" class="btn btn-primary"><i class="fas fa-plus"></i> Thêm Sản Phẩm</a>
+  <div style="display:flex; gap:10px; flex-wrap:wrap">
+    <?php if($cnt_hethang > 0): ?>
+      <a href="panel.php?page=san-pham&tk=hethang" class="btn btn-danger"><i class="fas fa-exclamation-triangle"></i> Có <?= $cnt_hethang ?> SP hết hàng</a>
+    <?php endif; ?>
+    <a href="panel.php?page=form-san-pham" class="btn btn-primary"><i class="fas fa-plus"></i> Thêm Sản Phẩm</a>
+  </div>
 </div>
 
 <form method="GET" class="fbar">
@@ -458,6 +521,11 @@ elseif ($page === 'san-pham'):
     <?php while($d=$dms->fetch_assoc()):?>
     <option value="<?=$d['id']?>" <?=$dm==$d['id']?'selected':''?>><?=htmlspecialchars($d['ten_danh_muc'])?></option>
     <?php endwhile?>
+  </select>
+  <select name="tk" class="fctrl fbar-select">
+    <option value="">Tồn kho: Tất cả</option>
+    <option value="hethang" <?=$tk==='hethang'?'selected':''?>>Hết hàng (0)</option>
+    <option value="saphet" <?=$tk==='saphet'?'selected':''?>>Sắp hết (≤ 5)</option>
   </select>
   <select name="tt" class="fctrl fbar-select">
     <option value="">Tất cả trạng thái</option>
@@ -504,14 +572,14 @@ elseif ($page === 'san-pham'):
         <td class="fw7"><?=number_format($r['da_ban'])?></td>
         <td class="text-sm text-muted"><?=number_format($r['luot_xem'])?></td>
         <td>
-          <a href="panel.php?page=san-pham&toggle=<?=$r['id']?>&s=<?=urlencode($s)?>&dm=<?=$dm?>&tt=<?=$tt?>&pg=<?=$pg?>"
+          <a href="panel.php?page=san-pham&toggle=<?=$r['id']?>&s=<?=urlencode($s)?>&dm=<?=$dm?>&tk=<?=$tk?>&tt=<?=$tt?>&nb=<?=$nb?>&pg=<?=$pg?>"
              class="badge <?=$r['trang_thai']?'b-success':'b-gray'?>" style="text-decoration:none">
             <?=$r['trang_thai']?'Hiện':'Ẩn'?>
           </a>
         </td>
         <td style="white-space:nowrap">
           <a href="panel.php?page=form-san-pham&id=<?=$r['id']?>" class="ibtn ib-edit" title="Sửa"><i class="fas fa-edit"></i></a>
-          <a href="panel.php?page=san-pham&del=<?=$r['id']?>&s=<?=urlencode($s)?>&dm=<?=$dm?>&tt=<?=$tt?>&pg=<?=$pg?>"
+          <a href="panel.php?page=san-pham&del=<?=$r['id']?>&s=<?=urlencode($s)?>&dm=<?=$dm?>&tk=<?=$tk?>&tt=<?=$tt?>&nb=<?=$nb?>&pg=<?=$pg?>"
              class="ibtn ib-del" title="Ẩn sản phẩm" data-confirm="Ẩn sản phẩm '<?=htmlspecialchars(addslashes($r['ten_vi']))?>'?">
              <i class="fas fa-eye-slash"></i></a>
           <a href="../../sanpham.php?id=<?=$r['id']?>" class="ibtn ib-view" title="Xem trang web" target="_blank"><i class="fas fa-external-link-alt"></i></a>
@@ -525,11 +593,11 @@ elseif ($page === 'san-pham'):
 
 <?php if($pages>1):?>
 <div class="pagi">
-  <?php if($pg>1):?><a href="panel.php?page=san-pham&s=<?=urlencode($s)?>&dm=<?=$dm?>&tt=<?=$tt?>&pg=<?=$pg-1?>" class="pagi-link"><i class="fas fa-chevron-left"></i></a><?php endif?>
+  <?php if($pg>1):?><a href="panel.php?page=san-pham&s=<?=urlencode($s)?>&dm=<?=$dm?>&tk=<?=$tk?>&tt=<?=$tt?>&nb=<?=$nb?>&pg=<?=$pg-1?>" class="pagi-link"><i class="fas fa-chevron-left"></i></a><?php endif?>
   <?php for($i=max(1,$pg-2);$i<=min($pages,$pg+2);$i++):?>
-  <a href="panel.php?page=san-pham&s=<?=urlencode($s)?>&dm=<?=$dm?>&tt=<?=$tt?>&pg=<?=$i?>" class="pagi-link <?=$i==$pg?'active':''?>"><?=$i?></a>
+  <a href="panel.php?page=san-pham&s=<?=urlencode($s)?>&dm=<?=$dm?>&tk=<?=$tk?>&tt=<?=$tt?>&nb=<?=$nb?>&pg=<?=$i?>" class="pagi-link <?=$i==$pg?'active':''?>"><?=$i?></a>
   <?php endfor?>
-  <?php if($pg<$pages):?><a href="panel.php?page=san-pham&s=<?=urlencode($s)?>&dm=<?=$dm?>&tt=<?=$tt?>&pg=<?=$pg+1?>" class="pagi-link"><i class="fas fa-chevron-right"></i></a><?php endif?>
+  <?php if($pg<$pages):?><a href="panel.php?page=san-pham&s=<?=urlencode($s)?>&dm=<?=$dm?>&tk=<?=$tk?>&tt=<?=$tt?>&nb=<?=$nb?>&pg=<?=$pg+1?>" class="pagi-link"><i class="fas fa-chevron-right"></i></a><?php endif?>
 </div>
 <?php endif?>
 
@@ -773,6 +841,160 @@ if($warn&&$warn->num_rows>0):?>
 <?php if($pages>1):?><div class="pagi"><?php for($i=max(1,$pg-2);$i<=min($pages,$pg+2);$i++):?><a href="panel.php?page=khach-hang&s=<?=urlencode($s)?>&tt=<?=urlencode($tt)?>&pg=<?=$i?>" class="pagi-link <?=$i==$pg?'active':''?>"><?=$i?></a><?php endfor?></div><?php endif?>
 
 <?php
+// ────────────────── QUẢN LÝ TIN NHẮN (CHAT) ──────────────────
+elseif ($page === 'chat'):
+?>
+<style>
+.chat-container { display: flex; height: 75vh; background: #fff; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); border: 1px solid #E8E1D5; overflow: hidden; margin-bottom: 20px; }
+.chat-sidebar { width: 320px; border-right: 1px solid #E8E1D5; display: flex; flex-direction: column; background: #FAF6EE; }
+.chat-sidebar-header { padding: 18px; border-bottom: 1px solid #E8E1D5; font-weight: bold; color: #8B0000; font-size: 1.2rem; }
+.user-list { flex: 1; overflow-y: auto; }
+.user-item { padding: 15px; border-bottom: 1px solid #E8E1D5; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 12px; }
+.user-item:hover, .user-item.active { background: #fff; border-left: 4px solid #8B0000; }
+.user-avatar { width: 45px; height: 45px; border-radius: 50%; background: #C9A84C; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; }
+.user-info { flex: 1; overflow: hidden; }
+.user-name { font-weight: bold; font-size: 0.95rem; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.chat-main { flex: 1; display: flex; flex-direction: column; background: #fff; }
+.chat-main-header { padding: 15px 20px; border-bottom: 1px solid #E8E1D5; font-weight: bold; font-size: 1.1rem; color: #333; display: flex; align-items: center; gap: 12px; background: #FFF8EE; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 20px; background: #F9F9F9; display: flex; flex-direction: column; gap: 10px; }
+.msg { max-width: 70%; padding: 10px 15px; border-radius: 12px; font-size: 0.95rem; line-height: 1.4; position: relative; }
+.msg.khach { align-self: flex-start; background: #fff; border: 1px solid #E8E1D5; color: #333; border-bottom-left-radius: 2px; }
+.msg.admin { align-self: flex-end; background: #8B0000; color: #fff; border-bottom-right-radius: 2px; }
+.msg.ai { align-self: flex-start; background: #E8E1D5; color: #555; font-style: italic; border-bottom-left-radius: 2px; font-size: 0.85rem; }
+.msg-time { display: block; font-size: 0.7rem; margin-top: 5px; opacity: 0.7; text-align: right; }
+
+.chat-input-area { padding: 15px; border-top: 1px solid #E8E1D5; background: #fff; display: flex; gap: 10px; }
+.chat-input { flex: 1; padding: 12px 18px; border: 1px solid #ddd; border-radius: 25px; outline: none; font-family: inherit; font-size: 0.95rem; }
+.chat-input:focus { border-color: #8B0000; }
+.btn-send { background: #8B0000; color: #fff; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: 0.2s;}
+.btn-send:hover { transform: scale(1.05); }
+
+#emptyChat { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #aaa; }
+</style>
+
+<div class="chat-container">
+    <div class="chat-sidebar">
+        <div class="chat-sidebar-header"><i class="fas fa-comments me-2"></i>Khách hàng cần tư vấn</div>
+        <div class="user-list" id="userList">
+            <div style="padding: 20px; text-align: center; color: #888;"><i class="fas fa-spinner fa-spin"></i> Đang tải...</div>
+        </div>
+    </div>
+    
+    <div class="chat-main" id="chatMain" style="display:none;">
+        <div class="chat-main-header">
+            <div class="user-avatar" id="activeAvatar" style="width: 35px; height: 35px; font-size: 1rem;">K</div>
+            <span id="activeName">Tên khách hàng</span>
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <form class="chat-input-area" id="adminChatForm">
+            <input type="text" id="adminChatInput" class="chat-input" placeholder="Nhập tin nhắn hỗ trợ khách..." autocomplete="off">
+            <button type="submit" class="btn-send"><i class="fas fa-paper-plane"></i></button>
+        </form>
+    </div>
+    
+    <div id="emptyChat">
+        <i class="fas fa-comment-dots fa-4x mb-3" style="color: #E8E1D5;"></i>
+        <h5 style="color: #888;">Chọn một khách hàng để bắt đầu chat</h5>
+    </div>
+</div>
+
+<script>
+let activeUid = 0;
+let adminChatTimer = null;
+let isScrolledBottom = true;
+
+async function loadUsers() {
+    try {
+        const res = await fetch('ajax_chat.php?action=get_users');
+        const data = await res.json();
+        if (data.success) {
+            const list = document.getElementById('userList');
+            list.innerHTML = '';
+            data.users.forEach(u => {
+                const name = u.HoVaTen || u.TaiKhoan;
+                const av = name.charAt(0).toUpperCase();
+                const activeCls = (activeUid == u.idKhachHang) ? 'active' : '';
+                list.innerHTML += `
+                    <div class="user-item ${activeCls}" onclick="openChat(event, ${u.idKhachHang}, '${name}', '${av}')">
+                        <div class="user-avatar">${av}</div>
+                        <div class="user-info">
+                            <div class="user-name">${name}</div>
+                            <div style="font-size:0.75rem; color:#888;">Cập nhật: Vừa xong</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+    } catch(e) {}
+}
+
+async function openChat(event, uid, name, av) {
+    activeUid = uid;
+    document.getElementById('emptyChat').style.display = 'none';
+    document.getElementById('chatMain').style.display = 'flex';
+    document.getElementById('activeName').textContent = name;
+    document.getElementById('activeAvatar').textContent = av;
+    
+    // Highlight list
+    document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+
+    await fetchMessages();
+    if(adminChatTimer) clearInterval(adminChatTimer);
+    adminChatTimer = setInterval(fetchMessages, 2000); // Admin load 2 giây 1 lần cho lẹ
+}
+
+async function fetchMessages() {
+    if(!activeUid) return;
+    try {
+        const res = await fetch('ajax_chat.php?action=get_messages&uid=' + activeUid);
+        const data = await res.json();
+        if(data.success) {
+            const box = document.getElementById('chatMessages');
+            // Kiểm tra xem admin có đang cuộn lên để xem tin nhắn cũ không
+            isScrolledBottom = box.scrollHeight - box.clientHeight <= box.scrollTop + 50;
+            
+            let html = '';
+            data.messages.forEach(m => {
+                let senderPrefix = '';
+                if(m.nguoi_gui === 'ai') senderPrefix = '<strong>🤖 Trợ lý AI:</strong><br>';
+                html += `<div class="msg ${m.nguoi_gui}">${senderPrefix}${m.noi_dung}<span class="msg-time">${m.gio}</span></div>`;
+            });
+            box.innerHTML = html;
+            
+            if (isScrolledBottom) box.scrollTop = box.scrollHeight;
+        }
+    } catch(e) {}
+}
+
+document.getElementById('adminChatForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const inp = document.getElementById('adminChatInput');
+    const msg = inp.value.trim();
+    if(!msg || !activeUid) return;
+
+    // In ngay ra màn hình để có cảm giác mượt
+    const box = document.getElementById('chatMessages');
+    box.innerHTML += `<div class="msg admin">${msg}<span class="msg-time">Vừa xong</span></div>`;
+    box.scrollTop = box.scrollHeight;
+    inp.value = '';
+
+    try {
+        await fetch('ajax_chat.php?action=send', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ uid: activeUid, message: msg })
+        });
+        fetchMessages();
+    } catch(e) {}
+});
+
+loadUsers();
+setInterval(loadUsers, 5000); // Cứ 5s check xem có khách hàng mới nào chat không
+</script>
+<?php
+
 // ────────────────── ĐÁNH GIÁ ──────────────────
 elseif ($page === 'danh-gia'):
 $tab = $_GET['tab'] ?? 'all'; 

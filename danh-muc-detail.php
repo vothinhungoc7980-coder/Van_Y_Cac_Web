@@ -394,7 +394,7 @@ body{ font-family:'EB Garamond',Georgia,serif; background:#fff; color:var(--ink)
         <h2>Đặt May Riêng <?= htmlspecialchars($ten_dm) ?> Cho Bạn</h2>
         <p>Chúng tôi nhận may đo theo số đo cá nhân, đảm bảo vừa vặn hoàn hảo với từng vóc dáng và tôn lên khí chất riêng của bạn.</p>
         <a href="bosuutap.php?danh_muc=<?= $dm['id'] ?>" class="btn-explore me-3" style="border-radius: 30px;"><i class="fas fa-shopping-bag me-2"></i>Xem Mẫu</a>
-        <a href="#" class="btn-explore" style="background:transparent; border:2px solid var(--go); color:var(--go); border-radius: 30px;"><i class="fas fa-phone me-2"></i>Tư Vấn Ngay</a>
+      <a href="tel:0326513356" class="btn-explore" style="background:transparent; border:2px solid var(--go); color:var(--go); border-radius: 30px;"><i class="fas fa-phone me-2"></i>Tư Vấn Ngay</a>
     </div>
 </section>
 
