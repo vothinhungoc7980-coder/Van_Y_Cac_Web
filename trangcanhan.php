@@ -341,8 +341,26 @@ body{font-family:var(--fb);background:var(--pa);color:var(--ink);font-size:15px}
             <div style="display:flex;justify-content:space-between;border-top:2px solid var(--bd);padding-top:9px"><span style="font-weight:700;font-family:var(--fd)">Tổng thanh toán</span><span style="font-family:var(--fd);font-size:1.2rem;font-weight:700;color:var(--cr)"><?= number_format($order_detail['thanh_tien'],0,',','.')?>₫</span></div>
           </div>
 
-          <?php if ($order_detail['trang_thai_dh']==='Chờ xác nhận'): ?>
-          <div style="margin-top:14px">
+       <?php if ($order_detail['trang_thai_dh'] === 'Chờ xác nhận'): ?>
+          <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap">
+            
+            <?php 
+            // Kiểm tra xem có phải phương thức thanh toán online và chưa thanh toán không
+            $pt_tt = mb_strtolower($order_detail['phuong_thuc_tt'] ?? '', 'UTF-8');
+            $tt_tt = mb_strtolower($order_detail['trang_thai_tt'] ?? '', 'UTF-8');
+            
+            // Nếu không phải là thanh toán khi nhận hàng (COD) và trạng thái là chưa/chờ thanh toán
+            $is_online = (strpos($pt_tt, 'nhận hàng') === false && strpos($pt_tt, 'cod') === false);
+            $is_unpaid = (strpos($tt_tt, 'chưa') !== false || strpos($tt_tt, 'chờ') !== false);
+            
+            if ($is_online && $is_unpaid): 
+            ?>
+            <a href="thanhtoan.php?don=<?= $order_detail['id'] ?>" 
+               style="padding:8px 18px;background:#059669;color:#fff;border-radius:4px;text-decoration:none;font-size:.82rem;font-weight:700;display:inline-flex;align-items:center;gap:6px;font-family:var(--fb);box-shadow:0 2px 4px rgba(5,150,105,0.2);">
+               <i class="fas fa-qrcode"></i> Thanh Toán Ngay
+            </a>
+            <?php endif; ?>
+
             <button onclick="openCancelModal(<?= $order_detail['id'] ?>, '<?= htmlspecialchars($order_detail['ma_don_hang']) ?>')"
                style="padding:8px 18px;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:4px;cursor:pointer;font-size:.82rem;font-weight:700;display:inline-flex;align-items:center;gap:6px;font-family:var(--fb)"><i class="fas fa-times-circle"></i> Hủy Đơn Hàng</button>
           </div>

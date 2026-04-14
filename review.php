@@ -19,11 +19,32 @@ $uid      = (int)($_SESSION['user_id'] ?? $_SESSION['user']['id'] ?? 0);
 
 if (!$sp_id) { echo json_encode(['success'=>false,'message'=>'Sản phẩm không hợp lệ']); exit; }
 
-// Kiểm tra đã đánh giá sản phẩm này chưa
-$check_q = "SELECT id FROM danh_gia WHERE id_san_pham=$sp_id AND id_khach_hang=$uid LIMIT 1";
-$exists = $conn->query($check_q)->fetch_assoc();
-if ($exists) {
-    echo json_encode(['success'=>false,'message'=>'Bạn đã đánh giá sản phẩm này rồi.']);
+// 1. Đếm số lần khách đã mua thành công sản phẩm này
+$q_mua = "SELECT COUNT(DISTINCT dh.id) as total_bought 
+          FROM chi_tiet_don_hang ct 
+          JOIN don_hang dh ON ct.id_don_hang = dh.id 
+          WHERE ct.id_san_pham = $sp_id 
+            AND dh.id_khach_hang = $uid 
+            AND dh.trang_thai_dh = 'Hoàn thành'";
+$row_mua = $conn->query($q_mua)->fetch_assoc();
+$total_bought = (int)($row_mua['total_bought'] ?? 0);
+
+// Nếu chưa mua hoặc đơn chưa giao thành công
+if ($total_bought === 0) {
+    echo json_encode(['success'=>false,'message'=>'Bạn cần mua và nhận hàng thành công sản phẩm này trước khi đánh giá!']);
+    exit;
+}
+
+// 2. Đếm số lần khách đã đánh giá sản phẩm này
+$q_dg = "SELECT COUNT(id) as total_reviewed 
+         FROM danh_gia 
+         WHERE id_san_pham = $sp_id AND id_khach_hang = $uid";
+$row_dg = $conn->query($q_dg)->fetch_assoc();
+$total_reviewed = (int)($row_dg['total_reviewed'] ?? 0);
+
+// Nếu số lượt đánh giá đã bằng hoặc vượt quá số đơn hàng thành công
+if ($total_reviewed >= $total_bought) {
+    echo json_encode(['success'=>false,'message'=>'Hãy mua hàng để đánh giá tiếp nhé!']);
     exit;
 }
 

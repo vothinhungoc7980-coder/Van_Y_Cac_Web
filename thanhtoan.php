@@ -27,32 +27,54 @@ if (!isset($_SESSION['user_id'])) { header('Location: index.php'); exit; }
 
 $uid = (int)$_SESSION['user_id'];
 
-// Lấy danh sách gh_id từ URL
-$items_param = $_GET['items'] ?? '';
-$gh_ids = array_filter(array_map('intval', explode(',', $items_param)));
-if (empty($gh_ids)) { header('Location: giohang.php'); exit; }
+// 1. KIỂM TRA XEM CÓ PHẢI LÀ KHÁCH THANH TOÁN LẠI ĐƠN HÀNG CŨ KHÔNG
+$repay_don_id = isset($_GET['don']) ? (int)$_GET['don'] : 0;
 
-$in_ids = implode(',', $gh_ids);
+if ($repay_don_id > 0) {
+    // Lấy thông tin đơn hàng cũ từ database
+    $old_order = $conn->query("SELECT id, ma_don_hang, thanh_tien FROM don_hang WHERE id = $repay_don_id AND id_khach_hang = $uid AND trang_thai_dh = 'Chờ xác nhận' LIMIT 1")->fetch_assoc();
+    
+    // Nếu đơn không tồn tại hoặc đã xử lý thì quay về trang cá nhân
+    if (!$old_order) {
+        header('Location: trangcanhan.php?tab=orders'); 
+        exit;
+    }
+    
+    // Thiết lập các biến này để hệ thống bỏ qua form điền địa chỉ và hiện thẳng màn hình QR
+    $show_qr_order = $old_order['ma_don_hang'];
+    $qr_amount = $old_order['thanh_tien'];
+    $inserted_don_id = $old_order['id'];
+    
+} else {
+    // 2. NẾU LÀ ĐẶT HÀNG MỚI TỪ GIỎ HÀNG (Giữ nguyên logic cũ)
+    
+    // Lấy danh sách gh_id từ URL
+    $items_param = $_GET['items'] ?? '';
+    $gh_ids = array_filter(array_map('intval', explode(',', $items_param)));
+    if (empty($gh_ids)) { header('Location: giohang.php'); exit; }
 
-// Lấy sản phẩm từ giỏ
-$rs = $conn->query("
-    SELECT gh.id AS gh_id, gh.so_luong, gh.size,
-           sp.id AS sp_id, sp.ten_vi, sp.gia_ban, sp.gia_goc, sp.duong_dan, sp.so_luong_ton
-    FROM gio_hang gh
-    JOIN san_pham sp ON gh.id_san_pham = sp.id
-    WHERE gh.id IN ($in_ids) AND gh.id_khach_hang = $uid AND sp.trang_thai = 1
-");
-$order_items = [];
-$tong_tien   = 0;
-while ($r = $rs->fetch_assoc()) {
-    $r['tien_dong'] = $r['gia_ban'] * $r['so_luong'];
-    $tong_tien     += $r['tien_dong'];
-    $order_items[]  = $r;
+    $in_ids = implode(',', $gh_ids);
+
+    // Lấy sản phẩm từ giỏ
+    $rs = $conn->query("
+        SELECT gh.id AS gh_id, gh.so_luong, gh.size,
+               sp.id AS sp_id, sp.ten_vi, sp.gia_ban, sp.gia_goc, sp.duong_dan, sp.so_luong_ton
+        FROM gio_hang gh
+        JOIN san_pham sp ON gh.id_san_pham = sp.id
+        WHERE gh.id IN ($in_ids) AND gh.id_khach_hang = $uid AND sp.trang_thai = 1
+    ");
+    $order_items = [];
+    $tong_tien   = 0;
+    while ($r = $rs->fetch_assoc()) {
+        $r['tien_dong'] = $r['gia_ban'] * $r['so_luong'];
+        $tong_tien     += $r['tien_dong'];
+        $order_items[]  = $r;
+    }
+    if (empty($order_items)) { header('Location: giohang.php'); exit; }
+
+    $phi_ship   = $tong_tien >= 1000000 ? 0 : 30000;
+    $thanh_tien = $tong_tien + $phi_ship;
 }
-if (empty($order_items)) { header('Location: giohang.php'); exit; }
-
-$phi_ship   = $tong_tien >= 1000000 ? 0 : 30000;
-$thanh_tien = $tong_tien + $phi_ship;
 
 // Lấy thông tin user
 $user_info = $conn->query("SELECT HoVaTen, SoDienThoai, Email FROM khachhang WHERE idKhachHang=$uid LIMIT 1")->fetch_assoc();
@@ -214,9 +236,8 @@ body{font-family:var(--fb);background:var(--pa);color:var(--ink)}
         <h2 style="color: #8B0000; font-family: 'Cormorant Garamond', serif; font-weight: bold; margin-bottom: 5px;">Thanh Toán Đơn Hàng</h2>
         <p style="color: #6B6B6B; margin-bottom: 25px;">Quét mã qua ứng dụng Ngân hàng hoặc MoMo</p>
 
-        <div style="background: #FFF8EE; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 2px dashed #C9A84C; display: inline-block;">
-            <<img src="https://img.vietqr.io/image/MB-0326513356-compact2.png?amount=<?=$qr_amount?>&addInfo=<?=$show_qr_order?>&accountName=VO%20THI%20NHU%20NGOC" alt="Mã QR Thanh Toán" style="max-width: 100%; border-radius: 8px;">
-                 alt="Mã QR Thanh Toán" style="max-width: 100%; border-radius: 8px;">
+<div style="background: #FFF8EE; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 2px dashed #C9A84C; display: inline-block;">
+            <img src="https://img.vietqr.io/image/MB-0326513356-compact2.png?amount=<?=$qr_amount?>&addInfo=<?=$show_qr_order?>&accountName=VO%20THI%20NHU%20NGOC" alt="Mã QR Thanh Toán" style="max-width: 100%; border-radius: 8px;">
         </div>
 
         <div style="font-size: 1.4rem; font-weight: bold; color: #8B0000; margin-bottom: 5px;">
@@ -225,46 +246,90 @@ body{font-family:var(--fb);background:var(--pa);color:var(--ink)}
         <div style="font-size: 0.9rem; color: #1A0A0A; margin-bottom: 25px;">
             Nội dung: <strong style="color: #8B0000;"><?=$show_qr_order?></strong>
         </div>
-
-        <div id="qr-status" style="margin-bottom: 20px; font-weight: bold; padding: 12px; background: #f8f9fa; border-radius: 8px;">
-            <span id="qr-status-text" style="color: #C9A84C;"><i class="fas fa-spinner fa-spin me-2"></i>Hệ thống đang chờ nhận tiền...</span>
-            <div style="font-size: 0.8rem; color: #6b6b6b; margin-top: 5px; font-weight: normal;">Tự động xác nhận sau <span id="qr-timer">15</span> giây</div>
+<div id="qr-status" style="margin-bottom: 20px; font-weight: bold; padding: 12px; background: #f8f9fa; border-radius: 8px;">
+            <span id="qr-status-text" style="color: #8B0000;"><i class="fas fa-qrcode me-2"></i>Vui lòng quét mã để thanh toán</span>
+            <div style="font-size: 0.85rem; color: #6b6b6b; margin-top: 5px; font-weight: normal;">
+                Thời gian chờ: <strong id="qr-timer" style="color: #8B0000; font-size: 1.1rem;">30</strong> giây
+            </div>
         </div>
 
-        <button id="btn-paid-mock" onclick="completePayment()" style="background: linear-gradient(135deg, #8B0000, #5C0000); color: #fff; border: none; padding: 12px 30px; border-radius: 30px; font-weight: bold; cursor: pointer; transition: 0.3s; width: 100%;">
-            Tôi đã chuyển khoản xong
-        </button>
+        <a href="trangcanhan.php?tab=orders&new_order=<?=$inserted_don_id?>" style="display: inline-block; background: #E8E1D5; color: #1A0A0A; text-decoration: none; padding: 14px 30px; border-radius: 30px; font-weight: bold; transition: 0.3s; width: 100%;">
+            Quay lại xem đơn hàng
+        </a>
     </div>
 </div>
 
 <script>
-    // Giả lập API tự động nhận diện thanh toán
-    let timeLeft = 15;
-    const timerEl = document.getElementById('qr-timer');
-    const interval = setInterval(() => {
+    // 1. LINK GOOGLE APPS SCRIPT CỦA BẠN:
+    const GOOGLE_SHEET_API = 'https://script.google.com/macros/s/AKfycbzK83LD5s7svzfXbr9p-bMxToEPbQb4uQ2hxiGDm4Hd-hr3S_Hn0vXpGbTGyU0h9J--/exec'; 
+    
+    // 2. Dữ liệu đơn hàng
+    const maDon = '<?=$show_qr_order?>';
+    const soTien = <?=$qr_amount?>;
+    const idDonHang = <?=$inserted_don_id?>;
+
+    let timeLeft = 30; // Set 15 giây đếm ngược
+    let isPaid = false;
+
+    // Vòng lặp: Đếm ngược mỗi 1 giây
+    let countdownInterval = setInterval(async function() {
         timeLeft--;
+        const timerEl = document.getElementById('qr-timer');
         if(timerEl) timerEl.innerText = timeLeft;
-        if(timeLeft <= 0) {
-            clearInterval(interval);
-            completePayment(); // Hết giờ tự động hoàn tất
+
+        // Cứ mỗi 3 giây thì "hỏi thăm" Google Sheet 1 lần để xem có tiền vào chưa
+        if (timeLeft % 3 === 0 && timeLeft > 0) {
+            try {
+                let response = await fetch(`${GOOGLE_SHEET_API}?ma_don=${maDon}&so_tien=${soTien}`);
+                let data = await response.json();
+
+                // Nếu Sheet báo TÌM THẤY TIỀN (paid = true)
+                if (data.paid === true) {
+                    isPaid = true;
+                    clearInterval(countdownInterval); // Dừng đếm ngược ngay lập tức
+
+                    // Báo cho Database cập nhật thành "Đã thanh toán"
+                    await fetch(`xac_nhan_tt.php?id=${idDonHang}`);
+
+                    // HIỆN TÍCH XANH THÀNH CÔNG
+                    const statusText = document.getElementById('qr-status-text');
+                    statusText.innerHTML = '<i class="fas fa-check-circle me-2" style="font-size: 1.2rem;"></i>Thanh toán thành công! Đang chuyển hướng...';
+                    statusText.style.color = '#046C4E';
+                    
+                    const statusBox = document.getElementById('qr-status');
+                    statusBox.style.background = '#DEF7EC';
+                    statusBox.style.border = '1px solid #31C48D';
+                    
+                    timerEl.parentElement.style.display = 'none'; // Ẩn dòng chữ thời gian chờ
+
+                    // Chuyển về trang lịch sử đơn hàng
+                    setTimeout(() => {
+                        window.location.href = `trangcanhan.php?tab=orders&new_order=${idDonHang}`;
+                    }, 1500);
+                }
+            } catch (error) {
+                console.log("Đang kiểm tra Google Sheet...");
+            }
         }
-    }, 1000);
 
-    function completePayment() {
-        clearInterval(interval);
-        const statusText = document.getElementById('qr-status-text');
-        statusText.innerHTML = '<i class="fas fa-check-circle me-2"></i>Đã nhận được tiền! Đang xử lý...';
-        statusText.style.color = '#046C4E';
-        document.getElementById('qr-status').style.background = '#DEF7EC';
-        document.getElementById('btn-paid-mock').style.display = 'none';
+        // NẾU HẾT 15 GIÂY MÀ CHƯA CÓ TIỀN
+        if (timeLeft <= 0 && !isPaid) {
+            clearInterval(countdownInterval); // Dừng quét
+            
+            // HIỆN LỖI THẤT BẠI MÀU ĐỎ
+            const statusText = document.getElementById('qr-status-text');
+            statusText.innerHTML = '<i class="fas fa-times-circle me-2" style="font-size: 1.2rem;"></i>Thanh toán thất bại / Hết thời gian';
+            statusText.style.color = '#991B1B';
+            
+            const statusBox = document.getElementById('qr-status');
+            statusBox.style.background = '#FEE2E2';
+            statusBox.style.border = '1px solid #FCA5A5';
+            
+            timerEl.parentElement.innerHTML = 'Hệ thống không nhận được khoản thanh toán của bạn.';
+        }
 
-        // Chuyển hướng về trang đơn hàng
-        setTimeout(() => {
-            window.location.href = 'trangcanhan.php?tab=orders&new_order=<?=$inserted_don_id?>';
-        }, 2000);
-    }
+    }, 1000); // 1000ms = 1 giây
 </script>
-
 <?php else: ?>
 <div class="page-hero">
   <div class="page-hero-inner">

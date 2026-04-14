@@ -328,7 +328,12 @@ $bdg=['Chờ xác nhận'=>'b-warning','Đã xác nhận'=>'b-info','Đang giao'
     <td><strong style="color:var(--cr);font-size:.8rem"><?=htmlspecialchars($d['ma_don_hang'])?></strong></td>
     <td><div style="font-weight:700;font-size:.84rem"><?=htmlspecialchars($d['ho_ten'])?></div><div class="text-xs text-muted"><?=htmlspecialchars($d['so_dien_thoai'])?></div></td>
     <td style="font-weight:700;font-size:.84rem"><?=number_format($d['thanh_tien'],0,',','.')?> ₫</td>
-    <td><span class="badge <?=$d['trang_thai_tt']==='Đã thanh toán'?'b-success':'b-warning'?>"><?=$d['trang_thai_tt']?></span></td>
+   <td>
+  <div style="font-size:.72rem; color:var(--mu); margin-bottom:4px; font-weight:600; white-space:nowrap;">
+      <i class="fas fa-wallet me-1"></i> <?=htmlspecialchars($d['phuong_thuc_tt'] ?? '')?>
+  </div>
+  <span class="badge <?=$d['trang_thai_tt']==='Đã thanh toán'?'b-success':'b-warning'?>"><?=$d['trang_thai_tt']?></span>
+</td>
   <td>
       <?php 
       $tt_dh = $d['trang_thai_dh'];
@@ -429,7 +434,7 @@ $cur_s=array_search($dh['trang_thai_dh'],$steps);
                 
                 <?php if ($tt_cur === 'Chờ xác nhận'): ?>
                     <button type="submit" name="trang_thai_dh" value="Đã xác nhận" class="btn btn-primary" style="font-weight:600;"><i class="fas fa-check-circle me-1"></i> Xác nhận đơn</button>
-                    <button type="submit" name="trang_thai_dh" value="Đã hủy" class="btn btn-outline-danger" style="font-weight:600;" onclick="return confirm('Khách hủy đơn / Bạn muốn hủy đơn này? Kho sẽ tự động hoàn lại sản phẩm.');"><i class="fas fa-times-circle me-1"></i> Hủy đơn</button>
+                    <button type="submit" name="trang_thai_dh" value="Đã hủy" class="btn btn-outline-danger" style="font-weight:600;" onclick="return confirm('Bạn muốn hủy đơn này? Kho sẽ tự động hoàn lại sản phẩm.');"><i class="fas fa-times-circle me-1"></i> Hủy đơn</button>
                 
                 <?php elseif ($tt_cur === 'Đã xác nhận'): ?>
                     <button type="submit" name="trang_thai_dh" value="Đang giao" class="btn" style="background:#8B5CF6; color:#fff; font-weight:600;"><i class="fas fa-truck me-1"></i> Bàn giao Vận chuyển</button>
