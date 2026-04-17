@@ -31,20 +31,42 @@ $uid = (int)$_SESSION['user_id'];
 $repay_don_id = isset($_GET['don']) ? (int)$_GET['don'] : 0;
 
 if ($repay_don_id > 0) {
-    // Lấy thông tin đơn hàng cũ từ database
-    $old_order = $conn->query("SELECT id, ma_don_hang, thanh_tien FROM don_hang WHERE id = $repay_don_id AND id_khach_hang = $uid AND trang_thai_dh = 'Chờ xác nhận' LIMIT 1")->fetch_assoc();
+    // Lấy thông tin đơn hàng cũ
+    $old_order = $conn->query("SELECT * FROM don_hang WHERE id = $repay_don_id AND id_khach_hang = $uid AND trang_thai_dh = 'Chờ xác nhận' LIMIT 1")->fetch_assoc();
     
-    // Nếu đơn không tồn tại hoặc đã xử lý thì quay về trang cá nhân
-    if (!$old_order) {
-        header('Location: trangcanhan.php?tab=orders'); 
-        exit;
+    if (!$old_order) { header('Location: trangcanhan.php?tab=orders'); exit; }
+
+    // XỬ LÝ KHI KHÁCH CHỌN PHƯƠNG THỨC MỚI VÀ BẤM XÁC NHẬN
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dat_hang'])) {
+        $pt_moi = $_POST['phuong_thuc_tt'] ?? 'Chuyển khoản';
+        
+        // Cập nhật phương thức mới vào đơn hàng cũ
+        $conn->query("UPDATE don_hang SET phuong_thuc_tt = '$pt_moi' WHERE id = $repay_don_id");
+
+        if ($pt_moi === 'VNPAY') {
+            header("Location: vnpay_create.php?id=$repay_don_id");
+            exit;
+        } else {
+            // MB Bank / Chuyển khoản -> Thiết lập để hiện màn hình QR 30s
+            $show_qr_order = $old_order['ma_don_hang'];
+            $qr_amount = $old_order['thanh_tien'];
+            $inserted_don_id = $old_order['id'];
+        }
     }
+
+    // Lấy dữ liệu để hiển thị bảng Tóm tắt đơn hàng bên phải
+    $tong_tien = $old_order['tong_tien'];
+    $phi_ship = $old_order['phi_van_chuyen'];
+    $thanh_tien = $old_order['thanh_tien'];
     
-    // Thiết lập các biến này để hệ thống bỏ qua form điền địa chỉ và hiện thẳng màn hình QR
-    $show_qr_order = $old_order['ma_don_hang'];
-    $qr_amount = $old_order['thanh_tien'];
-    $inserted_don_id = $old_order['id'];
-    
+    $rs_it = $conn->query("SELECT * FROM chi_tiet_don_hang WHERE id_don_hang = $repay_don_id");
+    $order_items = [];
+    while($it = $rs_it->fetch_assoc()) {
+        $it['ten_vi'] = $it['ten_san_pham'];
+        $it['duong_dan'] = $it['hinh_anh'];
+        $it['tien_dong'] = $it['thanh_tien'];
+        $order_items[] = $it;
+    }
 } else {
     // 2. NẾU LÀ ĐẶT HÀNG MỚI TỪ GIỎ HÀNG (Giữ nguyên logic cũ)
     
@@ -55,9 +77,9 @@ if ($repay_don_id > 0) {
 
     $in_ids = implode(',', $gh_ids);
 
-    // Lấy sản phẩm từ giỏ
+// Lấy sản phẩm từ giỏ
     $rs = $conn->query("
-        SELECT gh.id AS gh_id, gh.so_luong, gh.size,
+        SELECT gh.id AS gh_id, gh.so_luong, gh.size, gh.thong_so_rieng,
                sp.id AS sp_id, sp.ten_vi, sp.gia_ban, sp.gia_goc, sp.duong_dan, sp.so_luong_ton
         FROM gio_hang gh
         JOIN san_pham sp ON gh.id_san_pham = sp.id
@@ -117,13 +139,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dat_hang'])) {
                 $tn_e  = $conn->real_escape_string($oi['ten_vi']);
                 $img_e = $conn->real_escape_string($oi['duong_dan'] ?? '');
                 
-                // Lấy size từ giỏ hàng và bọc lại an toàn
+               // Lấy size và thông số riêng từ giỏ hàng và bọc lại an toàn
                 $sz_e  = $conn->real_escape_string($oi['size'] ?? ''); 
+                $ts_e  = $conn->real_escape_string($oi['thong_so_rieng'] ?? ''); 
                 
-                // Đã thêm cột "size" vào lệnh INSERT
+                // Thêm cột thong_so_rieng vào lệnh INSERT
                 $conn->query("INSERT INTO chi_tiet_don_hang
-                    (id_don_hang, id_san_pham, ten_san_pham, gia_ban, so_luong, thanh_tien, hinh_anh, size)
-                    VALUES ($don_id, {$oi['sp_id']}, '$tn_e', {$oi['gia_ban']}, {$oi['so_luong']}, {$oi['tien_dong']}, '$img_e', '$sz_e')");
+                    (id_don_hang, id_san_pham, ten_san_pham, gia_ban, so_luong, thanh_tien, hinh_anh, size, thong_so_rieng)
+                    VALUES ($don_id, {$oi['sp_id']}, '$tn_e', {$oi['gia_ban']}, {$oi['so_luong']}, {$oi['tien_dong']}, '$img_e', '$sz_e', '$ts_e')");
                 $conn->query("UPDATE san_pham SET
                     so_luong_ton = GREATEST(0, so_luong_ton - {$oi['so_luong']}),
                     da_ban = da_ban + {$oi['so_luong']}
@@ -132,11 +155,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dat_hang'])) {
         // Xóa sản phẩm đã đặt khỏi giỏ
             $conn->query("DELETE FROM gio_hang WHERE id IN ($in_ids) AND id_khach_hang = $uid");
             
-            // XỬ LÝ: NẾU LÀ COD THÌ CHUYỂN HƯỚNG, NẾU LÀ CHUYỂN KHOẢN/MOMO THÌ HIỆN QR
+            // XỬ LÝ: NẾU LÀ COD THÌ CHUYỂN HƯỚNG, NẾU LÀ CHUYỂN KHOẢN THÌ HIỆN QR
             if ($pt_e === 'COD') {
-                header("Location: trangcanhan.php?tab=orders&new_order=$don_id");
+           header("Location: trangcanhan.php?tab=orders&new_order=$don_id");
+                exit;
+            } elseif ($pt_e === 'VNPAY') {
+                // Chuyển hướng sang file tạo URL VNPAY
+                header("Location: vnpay_create.php?id=$don_id");
                 exit;
             } else {
+                // Xử lý chuyển khoản MB Bank (mã cũ của bạn)
                 $show_qr_order = $ma_dh;
                 $qr_amount = $thanh_tien;
                 $inserted_don_id = $don_id;
@@ -268,7 +296,7 @@ body{font-family:var(--fb);background:var(--pa);color:var(--ink)}
     const soTien = <?=$qr_amount?>;
     const idDonHang = <?=$inserted_don_id?>;
 
-    let timeLeft = 30; // Set 15 giây đếm ngược
+    let timeLeft = 30;
     let isPaid = false;
 
     // Vòng lặp: Đếm ngược mỗi 1 giây
@@ -312,7 +340,7 @@ body{font-family:var(--fb);background:var(--pa);color:var(--ink)}
             }
         }
 
-        // NẾU HẾT 15 GIÂY MÀ CHƯA CÓ TIỀN
+        // NẾU HẾT 30 GIÂY MÀ CHƯA CÓ TIỀN
         if (timeLeft <= 0 && !isPaid) {
             clearInterval(countdownInterval); // Dừng quét
             
@@ -374,6 +402,7 @@ body{font-family:var(--fb);background:var(--pa);color:var(--ink)}
         <input type="hidden" name="items" value="<?= htmlspecialchars($items_param) ?>">
 
         <!-- Địa chỉ giao hàng -->
+       <?php if ($repay_don_id == 0): ?>
         <div class="card">
           <div class="card-hd"><i class="fas fa-map-marker-alt"></i>Địa Chỉ Nhận Hàng</div>
           <div class="card-body">
@@ -412,10 +441,23 @@ body{font-family:var(--fb);background:var(--pa);color:var(--ink)}
         </div>
 
         <!-- Phương thức thanh toán -->
+       <?php endif; ?>
+
+        <?php if ($repay_don_id > 0): ?>
+        <div style="background: #FFFBEB; border: 1px solid #FCD34D; padding: 15px; border-radius: 8px; margin-bottom: 15px; color: #92400E; font-family: var(--fb); font-size: 0.9rem;">
+            <i class="fas fa-info-circle me-2"></i> Bạn đang thực hiện thanh toán lại cho đơn hàng <strong>#<?=$old_order['ma_don_hang']?></strong>. Vui lòng chọn phương thức thanh toán bên dưới để tiếp tục.
+        </div>
+        <?php endif; ?>
+
         <div class="card">
           <div class="card-hd"><i class="fas fa-credit-card"></i>Phương Thức Thanh Toán</div>
           <div class="card-body">
-            <div class="pt-grid">
+           <div class="pt-grid">
+              <label class="pt-item" id="pt-vnpay">
+                <input type="radio" name="phuong_thuc_tt" value="VNPAY" style="display:none">
+                <i class="fas fa-credit-card" style="color: #005BAA;"></i>
+                <span>Thanh toán qua VNPAY</span>
+              </label>
               <label class="pt-item active" id="pt-cod">
                 <input type="radio" name="phuong_thuc_tt" value="COD" checked style="display:none">
                 <i class="fas fa-money-bill-wave"></i>
@@ -426,11 +468,6 @@ body{font-family:var(--fb);background:var(--pa);color:var(--ink)}
                 <i class="fas fa-university"></i>
                 <span>Chuyển khoản ngân hàng</span>
               </label>
-              <label class="pt-item" id="pt-momo">
-                <input type="radio" name="phuong_thuc_tt" value="Momo" style="display:none">
-                <i class="fas fa-mobile-alt"></i>
-                <span>Ví MoMo</span>
-              </label>
             </div>
             <!-- Thông tin chuyển khoản -->
             <div id="bankInfo" style="display:none;margin-top:14px;background:#FFF8EE;border:1px solid var(--bd);border-radius:6px;padding:13px">
@@ -438,7 +475,7 @@ body{font-family:var(--fb);background:var(--pa);color:var(--ink)}
               <div style="font-size:.85rem;line-height:2">
                 <div>Ngân hàng: <strong>MB Bank (Ngân hàng  Quân Đội)</strong></div>
                 <div>Số TK: <strong>0326513356</strong></div>
-                <div>Chủ TK: <strong>VÂN Y CÁC</strong></div>
+                <div>Chủ TK: <strong>Võ Thị Như Ngọc</strong></div>
                 <div>Nội dung: <strong style="color:var(--cr)">VYC + SĐT của bạn</strong></div>
               </div>
             </div>

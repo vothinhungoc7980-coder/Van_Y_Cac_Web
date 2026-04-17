@@ -27,7 +27,6 @@ if ($action === 'get_users') {
 }
 
 // Lấy tin nhắn của 1 khách hàng cụ thể
-// Lấy tin nhắn của 1 khách hàng cụ thể
 if ($action === 'get_messages') {
     $uid = (int)($_GET['uid'] ?? 0);
     

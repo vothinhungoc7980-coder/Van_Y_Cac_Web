@@ -79,14 +79,17 @@ foreach ($_nav_dm as $dm) {
 $is_vcp_active = false;
 $is_tt_active  = false;
 
-foreach ($menu_co_phuc as $con) {
-    if ($current_dm_id == $con['id'] || ($current_slug && $current_slug === $con['slug'])) {
-        $is_vcp_active = true;
+// CHỈ BẬT SÁNG DANH MỤC NẾU KHÔNG PHẢI ĐANG Ở TRANG ĐẶT MAY
+if ($current_page !== 'datmay.php') {
+    foreach ($menu_co_phuc as $con) {
+        if ($current_dm_id == $con['id'] || ($current_slug && $current_slug === $con['slug'])) {
+            $is_vcp_active = true;
+        }
     }
-}
-foreach ($menu_truyen_thong as $con) {
-    if ($current_dm_id == $con['id'] || ($current_slug && $current_slug === $con['slug'])) {
-        $is_tt_active = true;
+    foreach ($menu_truyen_thong as $con) {
+        if ($current_dm_id == $con['id'] || ($current_slug && $current_slug === $con['slug'])) {
+            $is_tt_active = true;
+        }
     }
 }
 ?>
@@ -246,6 +249,9 @@ foreach ($menu_truyen_thong as $con) {
 
              <li class="nav-item">
                     <a class="nav-link <?= ($current_page == 'tuvan.php') ? 'active-page fw-bold' : '' ?>" href="tuvan.php">Tư Vấn AI</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?= ($current_page == 'datmay.php') ? 'active-page fw-bold' : '' ?>" href="datmay.php">Đặt May Riêng</a>
                 </li>
             </ul>
 

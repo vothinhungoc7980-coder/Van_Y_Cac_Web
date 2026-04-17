@@ -69,19 +69,37 @@ if ($page === 'don-hang' && $_SERVER['REQUEST_METHOD']==='POST') {
 }
 // ======== SẢN PHẨM ========
 if ($page === 'san-pham') {
+    // 1. NÚT ẨN/HIỆN (Giữ nguyên)
     if (isset($_GET['toggle'])) {
         $tid = (int)$_GET['toggle'];
         $conn->query("UPDATE san_pham SET trang_thai=1-trang_thai WHERE id=$tid");
         header('Location: panel.php?page=san-pham&msg=ok'); exit;
     }
+    
+    // 2. NÚT XÓA VĨNH VIỄN
     if (isset($_GET['del'])) {
         $did = (int)$_GET['del'];
-        $conn->query("UPDATE san_pham SET trang_thai=0 WHERE id=$did");
-        header('Location: panel.php?page=san-pham&msg=del'); exit;
+        
+        // Kiểm tra xem SP đã có ai mua chưa
+        $da_ban = (int)$conn->query("SELECT COUNT(*) c FROM chi_tiet_don_hang WHERE id_san_pham=$did")->fetch_assoc()['c'];
+
+        if ($da_ban > 0) {
+            $err = "Lỗi: Sản phẩm này đang nằm trong $da_ban hóa đơn của khách. Vui lòng sử dụng tính năng 'Ẩn' thay vì xóa để không làm sai lệch doanh thu.";
+        } else {
+            // Dọn dẹp giỏ hàng, đánh giá và xóa SP
+            $conn->query("DELETE FROM gio_hang WHERE id_san_pham=$did");
+            $conn->query("DELETE FROM danh_gia WHERE id_san_pham=$did");
+            if ($conn->query("DELETE FROM san_pham WHERE id=$did")) {
+                header('Location: panel.php?page=san-pham&msg=del'); exit;
+            } else {
+                $err = 'Lỗi hệ thống: ' . $conn->error;
+            }
+        }
     }
+    
     if (isset($_GET['msg'])) {
-        if ($_GET['msg']==='del') $ok = 'Đã ẩn sản phẩm.';
-        if ($_GET['msg']==='ok') $ok = 'Đã cập nhật thành công.';
+        if ($_GET['msg']==='del') $ok = 'Đã xóa vĩnh viễn sản phẩm.';
+        if ($_GET['msg']==='ok') $ok = 'Đã cập nhật trạng thái thành công.';
     }
 }
 
@@ -181,14 +199,37 @@ if ($page === 'khach-hang') {
     if ($action==='lock'   && $id) { $conn->query("UPDATE khachhang SET TrangThai='Vô hiệu hóa' WHERE idKhachHang=$id AND VaiTro='Khách hàng'"); header("Location: panel.php?page=khach-hang&ok=lock"); exit; }
     if ($action==='unlock' && $id) { $conn->query("UPDATE khachhang SET TrangThai='Kích hoạt' WHERE idKhachHang=$id AND VaiTro='Khách hàng'"); header("Location: panel.php?page=khach-hang&ok=unlock"); exit; }
     if ($action==='del'    && $id) {
-        $has=(int)$conn->query("SELECT COUNT(*) c FROM don_hang WHERE id_khach_hang=$id")->fetch_assoc()['c'];
-        if ($has) $err='Không thể xóa: tài khoản có '.$has.' đơn hàng.';
-        else { $conn->query("DELETE FROM khachhang WHERE idKhachHang=$id AND VaiTro='Khách hàng'"); $ok='Đã xóa tài khoản.'; }
+        // 1. Chỉ đếm những đơn hàng ĐANG XỬ LÝ (Chờ xác nhận, Đã xác nhận, Đang giao)
+        $active_orders = (int)$conn->query("SELECT COUNT(*) c FROM don_hang WHERE id_khach_hang=$id AND trang_thai_dh IN ('Chờ xác nhận', 'Đã xác nhận', 'Đang giao')")->fetch_assoc()['c'];
+
+        if ($active_orders > 0) {
+            $err = 'Không thể xóa: Khách này đang có '.$active_orders.' đơn hàng đang được xử lý.';
+        } else {
+            // TẮT KIỂM TRA KHÓA NGOẠI
+            $conn->query("SET FOREIGN_KEY_CHECKS=0");
+
+            // 2. Dọn dẹp sạch sẽ mọi dấu vết của khách hàng ở các bảng phụ
+            $conn->query("DELETE FROM gio_hang WHERE id_khach_hang=$id");
+            $conn->query("DELETE FROM danh_gia WHERE id_khach_hang=$id");
+            // Đã xóa bỏ dòng lệnh tìm bảng don_hang_may_do ở đây
+
+            // 3. Giữ lại doanh thu cho Shop bằng cách gỡ tên khách ra khỏi đơn cũ
+            $conn->query("UPDATE don_hang SET id_khach_hang = NULL WHERE id_khach_hang=$id");
+
+            // 4. Xóa khách hàng
+            if ($conn->query("DELETE FROM khachhang WHERE idKhachHang=$id AND VaiTro='Khách hàng'")) {
+                $conn->query("SET FOREIGN_KEY_CHECKS=1"); // Bật lại bảo vệ CSDL
+                header("Location: panel.php?page=khach-hang&ok=del");
+                exit;
+            } else {
+                $err = 'Lỗi hệ thống: ' . $conn->error;
+                $conn->query("SET FOREIGN_KEY_CHECKS=1"); // Bật lại bảo vệ CSDL
+            }
+        }
     }
-    $ok_map = ['lock'=>'Đã khóa tài khoản.','unlock'=>'Đã mở khóa tài khoản.'];
+    $ok_map = ['lock'=>'Đã khóa tài khoản.','unlock'=>'Đã mở khóa tài khoản.', 'del'=>'Đã xóa tài khoản thành công.'];
     if (isset($_GET['ok'])) $ok = $ok_map[$_GET['ok']] ?? 'Thành công.';
 }
-
 // ======== ĐÁNH GIÁ ========
 if ($page === 'danh-gia' && $_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['update_dg'])) {
     $dgid = (int)$_POST['dgid'];
@@ -206,9 +247,7 @@ require_once __DIR__ . '/layouts/header.php';
 <?php if($err):?><div class="alert al-danger"><i class="fas fa-exclamation-circle"></i> <div><?=$err?></div></div><?php endif?>
 
 <?php
-// ═══════════════════════════════════════════
-// RENDER TỪNG TRANG
-// ═══════════════════════════════════════════
+
 
 // ────────────────── DASHBOARD ──────────────────
 if ($page === 'dashboard'):
@@ -287,7 +326,8 @@ elseif ($page === 'don-hang' && !$id):
 $tab=$_GET['tab']??'all'; $s=trim($_GET['s']??''); $pg=max(1,(int)($_GET['pg']??1)); $lim=15; $off=($pg-1)*$lim;
 $cond="WHERE 1";
 if($tab==='cho')  $cond.=" AND trang_thai_dh='Chờ xác nhận'";
-elseif($tab==='xacnhan') $cond.=" AND trang_thai_dh='Đã xác nhận'"; // Thêm dòng này
+elseif($tab==='xacnhan') $cond.=" AND trang_thai_dh='Đã xác nhận'"; 
+elseif($tab==='maydo') $cond.=" AND id IN (SELECT id_don_hang FROM chi_tiet_don_hang WHERE thong_so_rieng IS NOT NULL AND thong_so_rieng != '')";
 elseif($tab==='giao') $cond.=" AND trang_thai_dh='Đang giao'";
 elseif($tab==='ht')   $cond.=" AND trang_thai_dh='Hoàn thành'";
 elseif($tab==='huy')  $cond.=" AND trang_thai_dh='Đã hủy'";
@@ -296,7 +336,7 @@ if($s) $cond.=" AND (ma_don_hang LIKE '%".($conn->real_escape_string($s))."%' OR
 
 $tabs_cnt=[];
 // Thêm 'xacnhan' vào mảng đếm số lượng
-foreach(['all'=>'','cho'=>"AND trang_thai_dh='Chờ xác nhận'", 'xacnhan'=>"AND trang_thai_dh='Đã xác nhận'", 'giao'=>"AND trang_thai_dh='Đang giao'",'ht'=>"AND trang_thai_dh='Hoàn thành'",'huy'=>"AND trang_thai_dh='Đã hủy'"] as $k=>$w)
+foreach(['all'=>'','cho'=>"AND trang_thai_dh='Chờ xác nhận'", 'xacnhan'=>"AND trang_thai_dh='Đã xác nhận'", 'giao'=>"AND trang_thai_dh='Đang giao'",'ht'=>"AND trang_thai_dh='Hoàn thành'",'huy'=>"AND trang_thai_dh='Đã hủy'", 'maydo'=>"AND id IN (SELECT id_don_hang FROM chi_tiet_don_hang WHERE thong_so_rieng IS NOT NULL AND thong_so_rieng != '')"] as $k=>$w)
   $tabs_cnt[trim($k)]=(int)$conn->query("SELECT COUNT(*) v FROM don_hang WHERE 1 $w")->fetch_assoc()['v'];
 
 $total=(int)$conn->query("SELECT COUNT(*) v FROM don_hang $cond")->fetch_assoc()['v'];
@@ -305,7 +345,7 @@ $rows=$conn->query("SELECT * FROM don_hang $cond ORDER BY ngay_tao DESC LIMIT $l
 $bdg=['Chờ xác nhận'=>'b-warning','Đã xác nhận'=>'b-info','Đang giao'=>'b-purple','Hoàn thành'=>'b-success','Đã hủy'=>'b-danger'];
 ?>
 <div class="tab-nav">
-  <?php foreach(['all'=>['Tất Cả',$tabs_cnt['all']],'cho'=>['Chờ Xác Nhận',$tabs_cnt['cho']], 'xacnhan'=>['Đã Xác Nhận',$tabs_cnt['xacnhan']], 'giao'=>['Đang Giao',$tabs_cnt['giao']],'ht'=>['Hoàn Thành',$tabs_cnt['ht']],'huy'=>['Đã Hủy',$tabs_cnt['huy']]] as $k=>[$lbl,$cnt]):?>
+<?php foreach(['all'=>['Tất Cả',$tabs_cnt['all']],'cho'=>['Chờ Xác Nhận',$tabs_cnt['cho']], 'xacnhan'=>['Đã Xác Nhận',$tabs_cnt['xacnhan']], 'giao'=>['Đang Giao',$tabs_cnt['giao']],'ht'=>['Hoàn Thành',$tabs_cnt['ht']],'huy'=>['Đã Hủy',$tabs_cnt['huy']], 'maydo'=>['Đơn May Đo',$tabs_cnt['maydo']]] as $k=>[$lbl,$cnt]):?>
   <button class="tab-btn <?=$tab===$k?'active':''?>" onclick="location.href='panel.php?page=don-hang&tab=<?=$k?>'">
     <?=$lbl?> <span class="badge <?=$k==='cho'&&$cnt>0?'b-danger':'b-gray'?>"><?=$cnt?></span>
   </button>
@@ -321,11 +361,15 @@ $bdg=['Chờ xác nhận'=>'b-warning','Đã xác nhận'=>'b-info','Đang giao'
   <span class="text-sm text-muted" style="margin-left:auto">Tổng: <strong><?=$total?></strong> đơn</span>
 </form>
 <div class="card"><div class="card-bd-flush" style="overflow-x:auto"><table class="dtable">
-  <thead><tr><th>Mã Đơn</th><th>Khách Hàng</th><th>Tổng Tiền</th><th>T.Toán</th><th>Trạng Thái</th><th>Ngày</th><th></th></tr></thead>
+  <thead><tr><th>Mã Đơn</th><th>Khách Hàng</th><th>Tổng Tiền</th><th>Thanh Toán</th><th>Trạng Thái</th><th>Ngày</th><th></th></tr></thead>
   <tbody>
   <?php while($d=$rows->fetch_assoc()):?>
   <tr>
-    <td><strong style="color:var(--cr);font-size:.8rem"><?=htmlspecialchars($d['ma_don_hang'])?></strong></td>
+<?php $is_maydo = (int)$conn->query("SELECT COUNT(*) c FROM chi_tiet_don_hang WHERE id_don_hang={$d['id']} AND thong_so_rieng IS NOT NULL AND thong_so_rieng != ''")->fetch_assoc()['c']; ?>
+    <td>
+        <strong style="color:var(--cr);font-size:.8rem"><?=htmlspecialchars($d['ma_don_hang'])?></strong>
+        <?php if ($is_maydo > 0): ?><div style="margin-top:4px"><span class="badge" style="background: #C9A84C; color: #fff; font-size: 0.65rem;"><i class="fas fa-cut"></i> May Đo</span></div><?php endif; ?>
+    </td>
     <td><div style="font-weight:700;font-size:.84rem"><?=htmlspecialchars($d['ho_ten'])?></div><div class="text-xs text-muted"><?=htmlspecialchars($d['so_dien_thoai'])?></div></td>
     <td style="font-weight:700;font-size:.84rem"><?=number_format($d['thanh_tien'],0,',','.')?> ₫</td>
    <td>
@@ -458,11 +502,17 @@ $cur_s=array_search($dh['trang_thai_dh'],$steps);
     <div class="card-bd-flush"><table class="dtable"><thead><tr><th>Ảnh</th><th>Sản Phẩm</th><th>Giá</th><th>SL</th><th>Thành Tiền</th></tr></thead><tbody>
     <?php while($it=$items->fetch_assoc()):?>
     <tr><td><?php if($it['hinh_anh']):?><img src="../image/<?=htmlspecialchars($it['hinh_anh'])?>" class="tbl-thumb" onerror="this.src='https://placehold.co/46x46?text=SP'"><?php else:?><div class="tbl-img-placeholder"><i class="fas fa-box"></i></div><?php endif?></td>
- <td style="font-weight:600;font-size:.84rem">
+<td style="font-weight:600;font-size:.84rem; max-width: 300px;">
         <?=htmlspecialchars($it['ten_san_pham'])?>
         <?php if (!empty($it['size'])): ?>
             <div style="margin-top: 4px;">
                 <span class="badge" style="background:#333; color:#fff; font-size:0.7rem; padding: 3px 8px;">Size: <?= htmlspecialchars($it['size']) ?></span>
+            </div>
+        <?php endif; ?>
+     <?php if (!empty($it['thong_so_rieng'])): ?>
+            <div style="margin-top: 10px; padding: 12px 15px; background: #FFF8EE; border-left: 4px solid #8B0000; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: inline-block;">
+                <div style="font-size: 0.75rem; color: #8B0000; font-weight: bold; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 1px;"><i class="fas fa-cut me-1"></i> Thông Số Thợ May Cần Chú Ý:</div>
+                <div style="font-size: 0.95rem; color: #1A0A0A; font-weight: 600; line-height: 1.5;"><?= htmlspecialchars($it['thong_so_rieng']) ?></div>
             </div>
         <?php endif; ?>
     </td>
@@ -582,11 +632,13 @@ elseif ($page === 'san-pham'):
             <?=$r['trang_thai']?'Hiện':'Ẩn'?>
           </a>
         </td>
-        <td style="white-space:nowrap">
+  <td style="white-space:nowrap">
           <a href="panel.php?page=form-san-pham&id=<?=$r['id']?>" class="ibtn ib-edit" title="Sửa"><i class="fas fa-edit"></i></a>
+          
           <a href="panel.php?page=san-pham&del=<?=$r['id']?>&s=<?=urlencode($s)?>&dm=<?=$dm?>&tk=<?=$tk?>&tt=<?=$tt?>&nb=<?=$nb?>&pg=<?=$pg?>"
-             class="ibtn ib-del" title="Ẩn sản phẩm" data-confirm="Ẩn sản phẩm '<?=htmlspecialchars(addslashes($r['ten_vi']))?>'?">
-             <i class="fas fa-eye-slash"></i></a>
+             class="ibtn ib-del" title="Xóa vĩnh viễn" data-confirm="XÓA VĨNH VIỄN sản phẩm '<?=htmlspecialchars(addslashes($r['ten_vi']))?>'? Hành động này không thể hoàn tác!">
+             <i class="fas fa-trash"></i></a>
+             
           <a href="../../sanpham.php?id=<?=$r['id']?>" class="ibtn ib-view" title="Xem trang web" target="_blank"><i class="fas fa-external-link-alt"></i></a>
         </td>
       </tr>

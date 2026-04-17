@@ -43,7 +43,7 @@ if ($action === 'send') {
     } elseif (str_contains($msg_lower, 'size') || str_contains($msg_lower, 'kích thước') || str_contains($msg_lower, 'số đo')) {
         $ai_reply = "Dạ Vân Y Các có bảng size chuẩn từ S đến 2XL. Bạn có thể vào xem chi tiết sản phẩm hoặc vào phần 'Tư Vấn AI' để hệ thống đo size chuẩn cho bạn nhé!";
     } elseif (str_contains($msg_lower, 'ship') || str_contains($msg_lower, 'giao hàng')) {
-        $ai_reply = "Dạ Vân Y Các miễn phí vận chuyển toàn quốc cho đơn hàng từ 500k ạ. Thời gian giao hàng khoảng 2-4 ngày tùy khu vực.";
+        $ai_reply = "Dạ Vân Y Các miễn phí vận chuyển toàn quốc cho đơn hàng từ 1 triệu ạ. Thời gian giao hàng khoảng 2-4 ngày tùy khu vực.";
     } elseif (str_contains($msg_lower, 'địa chỉ') || str_contains($msg_lower, 'cửa hàng')) {
         $ai_reply = "Dạ hiện tại Vân Y Các đang hoạt động trực tuyến. Chúng mình giao hàng hỏa tốc toàn quốc và bạn được kiểm tra hàng trước khi thanh toán ạ!";
     } elseif (str_contains($msg_lower, 'nhân viên') || str_contains($msg_lower, 'admin') || str_contains($msg_lower, 'người thật')) {

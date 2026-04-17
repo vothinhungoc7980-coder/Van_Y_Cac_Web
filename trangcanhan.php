@@ -59,9 +59,13 @@ $cart_count = (int)$conn->query("SELECT COALESCE(SUM(so_luong),0) c FROM gio_han
 $order_detail = null; $order_items = [];
 if ($view_order) {
     $order_detail = $conn->query("SELECT * FROM don_hang WHERE id=$view_order AND id_khach_hang=$uid LIMIT 1")->fetch_assoc();
+   $is_custom_order = false;
     if ($order_detail) {
         $rs_it = $conn->query("SELECT * FROM chi_tiet_don_hang WHERE id_don_hang=$view_order");
-        while ($it=$rs_it->fetch_assoc()) $order_items[]=$it;
+        while ($it=$rs_it->fetch_assoc()) {
+            $order_items[]=$it;
+            if (!empty($it['thong_so_rieng'])) $is_custom_order = true; // Phát hiện có hàng may đo
+        }
         $tab='orders';
     }
 }
@@ -269,7 +273,12 @@ body{font-family:var(--fb);background:var(--pa);color:var(--ink);font-size:15px}
       <a href="?tab=orders" class="back-btn"><i class="fas fa-arrow-left"></i> Quay lại danh sách</a>
       <div class="card">
         <div class="card-hd">
-          <div class="card-title"><i class="fas fa-receipt"></i>Đơn: <?= htmlspecialchars($order_detail['ma_don_hang']) ?></div>
+         <div class="card-title">
+             <i class="fas fa-receipt"></i>Đơn: <?= htmlspecialchars($order_detail['ma_don_hang']) ?>
+             <?php if($is_custom_order): ?>
+                <span class="badge ms-2" style="background: linear-gradient(135deg, #C9A84C, #B8860B); color: #fff; font-size: 0.75rem;"><i class="fas fa-cut me-1"></i>May Đo Riêng</span>
+             <?php endif; ?>
+          </div>
           <span class="badge <?= $cls ?>"><?= htmlspecialchars($order_detail['trang_thai_dh']) ?></span>
         </div>
         <div class="card-body">
@@ -327,9 +336,20 @@ body{font-family:var(--fb);background:var(--pa);color:var(--ink);font-size:15px}
         <a href="sanpham.php?id=<?= $oi['id_san_pham'] ?>&review=1" class="badge badge-success ms-2 text-decoration-none"><i class="fas fa-pen"></i> Viết đánh giá</a>
     <?php endif; ?>
 </div>
-              <div class="item-meta">Số lượng: <?= $oi['so_luong'] ?> &middot; <?= number_format($oi['gia_ban'],0,',','.')?>₫/cái</div>
-            </div>
-            <div class="item-price"><?= number_format($oi['thanh_tien'],0,',','.')?>₫</div>
+             <div class="item-meta">
+                  Số lượng: <?= $oi['so_luong'] ?> &middot; <?= number_format($oi['gia_ban'],0,',','.')?>₫/cái
+         <?php if (!empty($oi['thong_so_rieng'])): ?>
+                      <div style="margin-top: 15px; padding: 15px; background: #FFFDF5; border: 1px solid #E8E1D5; border-radius: 8px; position: relative;">
+                          <div style="position: absolute; top: -12px; left: 15px; background: linear-gradient(135deg, #8B0000, #B22222); color: #fff; padding: 3px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; letter-spacing: 1px; font-family: var(--fb); box-shadow: 0 4px 10px rgba(139,0,0,0.3);">
+                              <i class="fas fa-cut me-1"></i> THÔNG SỐ ĐẶT MAY
+                          </div>
+                          <div style="font-size: 0.88rem; color: #5C0000; line-height: 1.6; padding-top: 5px;">
+                              <?= htmlspecialchars($oi['thong_so_rieng']) ?>
+                          </div>
+                      </div>
+                  <?php endif; ?>
+              </div>
+            </div> <div class="item-price"><?= number_format($oi['thanh_tien'],0,',','.')?>₫</div>
           </div>
           <?php endforeach; ?>
 
@@ -341,8 +361,8 @@ body{font-family:var(--fb);background:var(--pa);color:var(--ink);font-size:15px}
             <div style="display:flex;justify-content:space-between;border-top:2px solid var(--bd);padding-top:9px"><span style="font-weight:700;font-family:var(--fd)">Tổng thanh toán</span><span style="font-family:var(--fd);font-size:1.2rem;font-weight:700;color:var(--cr)"><?= number_format($order_detail['thanh_tien'],0,',','.')?>₫</span></div>
           </div>
 
-       <?php if ($order_detail['trang_thai_dh'] === 'Chờ xác nhận'): ?>
-          <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap">
+ <?php if ($order_detail['trang_thai_dh'] === 'Chờ xác nhận'): ?>
+          <div style="margin-top:20px; padding-top: 15px; border-top: 1px dashed var(--bd); display:flex; justify-content: flex-end; gap:12px; flex-wrap:wrap">
             
             <?php 
             // Kiểm tra xem có phải phương thức thanh toán online và chưa thanh toán không
@@ -353,11 +373,13 @@ body{font-family:var(--fb);background:var(--pa);color:var(--ink);font-size:15px}
             $is_online = (strpos($pt_tt, 'nhận hàng') === false && strpos($pt_tt, 'cod') === false);
             $is_unpaid = (strpos($tt_tt, 'chưa') !== false || strpos($tt_tt, 'chờ') !== false);
             
-            if ($is_online && $is_unpaid): 
+          if ($is_online && $is_unpaid): 
+                // Chọn icon tùy theo phương thức thanh toán
+                $icon_btn = (strpos($pt_tt, 'vnpay') !== false) ? 'fas fa-credit-card' : 'fas fa-qrcode';
             ?>
             <a href="thanhtoan.php?don=<?= $order_detail['id'] ?>" 
                style="padding:8px 18px;background:#059669;color:#fff;border-radius:4px;text-decoration:none;font-size:.82rem;font-weight:700;display:inline-flex;align-items:center;gap:6px;font-family:var(--fb);box-shadow:0 2px 4px rgba(5,150,105,0.2);">
-               <i class="fas fa-qrcode"></i> Thanh Toán Ngay
+               <i class="<?= $icon_btn ?>"></i> Thanh Toán Ngay
             </a>
             <?php endif; ?>
 
@@ -395,7 +417,7 @@ body{font-family:var(--fb);background:var(--pa);color:var(--ink);font-size:15px}
           </div>
           <?php else: ?>
           <table class="otbl" id="orderTable">
-            <thead><tr><th></th><th>Mã Đơn</th><th>Ngày Đặt</th><th>Sản Phẩm</th><th>Tổng Tiền</th><th>TT Thanh Toán</th><th>Trạng Thái</th><th></th></tr></thead>
+            <thead><tr><th></th><th>Mã Đơn</th><th>Ngày Đặt</th><th style="min-width: 220px;">Sản Phẩm</th><th>Tổng Tiền</th><th>TT Thanh Toán</th><th>Trạng Thái</th><th></th></tr></thead>
             <tbody>
             <?php $don_hang->data_seek(0); while ($dh=$don_hang->fetch_assoc()):
               $cls2=$bdg_map[$dh['trang_thai_dh']]??'badge-secondary';
@@ -413,11 +435,13 @@ body{font-family:var(--fb);background:var(--pa);color:var(--ink);font-size:15px}
                 <div style="width:44px;height:54px;background:#F5F0E8;border-radius:4px;display:flex;align-items:center;justify-content:center;border:1px solid var(--bd)"><i class="fas fa-tshirt" style="color:var(--mu);font-size:.9rem"></i></div>
                 <?php endif; ?>
               </td>
+            <?php $is_maydo = (int)$conn->query("SELECT COUNT(*) c FROM chi_tiet_don_hang WHERE id_don_hang={$dh['id']} AND thong_so_rieng IS NOT NULL AND thong_so_rieng != ''")->fetch_assoc()['c']; ?>
               <td><strong style="color:var(--cr);font-size:.8rem"><?= htmlspecialchars($dh['ma_don_hang']) ?></strong>
                 <?php if ($is_new): ?><span class="badge badge-new ms-1">Mới</span><?php endif; ?>
+                <?php if ($is_maydo > 0): ?><br><span class="badge" style="background: linear-gradient(135deg, #C9A84C, #B8860B); color: #fff; font-size: 0.65rem; margin-top: 4px;"><i class="fas fa-cut"></i> Thiết kế riêng</span><?php endif; ?>
               </td>
               <td style="font-size:.77rem;color:var(--mu);white-space:nowrap"><?= date('d/m/Y H:i',strtotime($dh['ngay_tao'])) ?></td>
-              <td style="font-size:.8rem"><?php if ($sp_first): ?><?= htmlspecialchars(mb_substr($sp_first['ten_san_pham'],0,26)) ?><?= $sp_count>1?"<span style='color:var(--mu)'> +".($sp_count-1)." sp</span>":'' ?><?php endif; ?></td>
+             <td style="font-size:.85rem; line-height: 1.4;"><?php if ($sp_first): ?><?= htmlspecialchars(mb_substr($sp_first['ten_san_pham'],0,50)) ?><?= $sp_count>1?"<span style='color:var(--mu); font-weight:bold;'> <br>+".($sp_count-1)." sản phẩm khác</span>":'' ?><?php endif; ?></td>
               <td style="font-weight:700;white-space:nowrap;font-family:var(--fd)"><?= number_format($dh['thanh_tien'],0,',','.')?>₫</td>
               <td><span class="badge <?= $dh['trang_thai_tt']==='Đã thanh toán'?'badge-success':'badge-warning' ?>"><?= htmlspecialchars($dh['trang_thai_tt']??'') ?></span></td>
               <td><span class="badge <?= $cls2 ?>"><?= htmlspecialchars($dh['trang_thai_dh']) ?></span></td>
@@ -428,8 +452,8 @@ body{font-family:var(--fb);background:var(--pa);color:var(--ink);font-size:15px}
   <i class="fas fa-star"></i> Đánh giá
 </a>
 <?php endif; ?>
-                <?php if ($dh['trang_thai_dh']==='Chờ xác nhận'): ?>
-                <button onclick="openCancelModal(<?= $dh['id'] ?>, '<?= htmlspecialchars($dh['ma_don_hang']) ?>')" style="font-size:.75rem;color:#dc2626;background:none;border:none;cursor:pointer;margin-left:5px;font-family:var(--fb);font-weight:700;padding:4px 0">Hủy</button>
+            <?php if ($dh['trang_thai_dh']==='Chờ xác nhận'): ?>
+                <button onclick="openCancelModal(<?= $dh['id'] ?>, '<?= htmlspecialchars($dh['ma_don_hang']) ?>')" style="font-size:.75rem;color:#dc2626;background:#fff;border:1px solid #FECACA;border-radius:3px;cursor:pointer;margin-left:5px;font-family:var(--fb);font-weight:700;padding:4px 10px;display:inline-block;">Hủy</button>
                 <?php endif; ?>
               </td>
             </tr>
